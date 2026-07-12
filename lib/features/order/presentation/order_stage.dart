@@ -1,0 +1,70 @@
+import '../domain/entities/order_status.dart';
+
+/// How a single stepper node should render.
+enum StageState { complete, current, upcoming }
+
+/// Customer-facing lifecycle stages shown in the tracking stepper.
+///
+/// Deliberately **4 nodes, not 5**: the [OrderStatus] `pending → accepted` split
+/// is an internal/admin distinction ("received" vs "confirmed by the kitchen")
+/// that the customer shouldn't see, so both map to a single "Order Placed" node.
+/// The [OrderStatus] enum is unchanged — all 5 values remain for admin use; this
+/// is purely a display grouping.
+enum CustomerStage {
+  orderPlaced,
+  preparing,
+  ready,
+  delivered;
+
+  String get label => switch (this) {
+        CustomerStage.orderPlaced => 'Order Placed',
+        CustomerStage.preparing => 'Preparing',
+        CustomerStage.ready => 'Ready',
+        CustomerStage.delivered => 'Delivered',
+      };
+}
+
+/// The ordered customer stages (4 nodes).
+List<CustomerStage> get customerStages => CustomerStage.values;
+
+/// Maps an [OrderStatus] to the customer stage it belongs to.
+///
+/// `pending` and `accepted` both group into [CustomerStage.orderPlaced].
+/// `cancelled` has no linear stage (it's handled separately via [isCancelled]);
+/// it returns [CustomerStage.orderPlaced] only as a harmless default and is
+/// never used for a cancelled order.
+CustomerStage customerStageOf(OrderStatus status) => switch (status) {
+      OrderStatus.pending => CustomerStage.orderPlaced,
+      OrderStatus.accepted => CustomerStage.orderPlaced,
+      OrderStatus.preparing => CustomerStage.preparing,
+      OrderStatus.ready => CustomerStage.ready,
+      OrderStatus.delivered => CustomerStage.delivered,
+      OrderStatus.cancelled => CustomerStage.orderPlaced,
+    };
+
+/// How the customer [stage] renders given the order's [current] status:
+/// - `complete`  — already passed (and the whole track once `delivered`),
+/// - `current`   — the active stage,
+/// - `upcoming`  — not yet reached.
+///
+/// Not meaningful for a cancelled order — the UI shows a distinct cancelled
+/// state instead (see [isCancelled]).
+StageState stageStateFor(OrderStatus current, CustomerStage stage) {
+  // Delivered is terminal-success: the entire track reads as complete.
+  if (current == OrderStatus.delivered) return StageState.complete;
+  final currentStage = customerStageOf(current);
+  if (currentStage.index > stage.index) return StageState.complete;
+  if (currentStage.index == stage.index) return StageState.current;
+  return StageState.upcoming;
+}
+
+/// Whether the order is cancelled (rendered as a distinct state, not the
+/// linear stepper).
+bool isCancelled(OrderStatus status) => status == OrderStatus.cancelled;
+
+/// Cancellation is offered ONLY while the order is still pending (UI policy).
+///
+/// NB: this is intentionally stricter than [OrderStatus.allowedNextStatuses],
+/// which permits cancelling through `ready` — per the tracking spec, once an
+/// order is accepted the customer can no longer cancel from here.
+bool canCancelOrder(OrderStatus status) => status == OrderStatus.pending;

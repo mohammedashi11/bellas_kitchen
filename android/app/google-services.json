@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "813895188113",
+    "project_id": "bellaskitchen-cefcb",
+    "storage_bucket": "bellaskitchen-cefcb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:813895188113:android:e72fca997730c4a184c930",
+        "android_client_info": {
+          "package_name": "com.example.bellas_kitchen"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBD3B60-MPYMhXKw6rodfDBQn09hb0HKqo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

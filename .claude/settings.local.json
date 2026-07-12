@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm -v lib/core/errors/failures.dart)",
+      "Bash(rmdir lib/core/errors)",
+      "Bash(cd \"/c/Users/hmodm/AppData/Local/Pub/Cache/hosted/pub.dev/cloud_firestore-5.6.12\"; grep -rn \"class Order\\\\b\\\\|typedef Order\\\\b\\\\| Order =\" lib/ 2>/dev/null | head; echo \"--- exported names containing Order ---\"; grep -rn \"Order\" lib/cloud_firestore.dart 2>/dev/null | head)",
+      "Bash(dart format *)"
+    ]
+  }
+}
