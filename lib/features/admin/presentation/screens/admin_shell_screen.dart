@@ -6,6 +6,7 @@ import '../../../auth/presentation/providers/auth_providers.dart';
 import '../theme/admin_colors.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_live_orders_view.dart';
+import 'admin_menu_screen.dart';
 
 /// The admin app shell: one Scaffold + one shared bottom nav across all admin
 /// tabs. Post-login landing (`/admin/dashboard`) opens on Home (Dashboard).
@@ -35,8 +36,7 @@ class _AdminShellScreenState extends ConsumerState<AdminShellScreen> {
               onViewAllOrders: () => setState(() => _index = 1),
             ),
             const AdminLiveOrdersView(),
-            const _AdminPlaceholder(
-                title: 'Menu Management', icon: Icons.menu_book_rounded),
+            const AdminMenuScreen(),
             _SettingsPlaceholder(
               onSignOut: () =>
                   ref.read(authControllerProvider.notifier).signOut(),
@@ -53,34 +53,6 @@ class _AdminShellScreenState extends ConsumerState<AdminShellScreen> {
 }
 
 // ─── Placeholders ─────────────────────────────────────────────────────────────
-
-class _AdminPlaceholder extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  const _AdminPlaceholder({required this.title, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: AdminColors.textHint, size: 52),
-          const SizedBox(height: 14),
-          Text(title,
-              style: GoogleFonts.poppins(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: AdminColors.textPrimary)),
-          const SizedBox(height: 6),
-          Text('Coming soon',
-              style: GoogleFonts.poppins(
-                  fontSize: 14, color: AdminColors.textSecondary)),
-        ],
-      ),
-    );
-  }
-}
 
 class _SettingsPlaceholder extends StatelessWidget {
   final VoidCallback onSignOut;

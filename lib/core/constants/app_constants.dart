@@ -105,6 +105,12 @@ abstract final class AppConstants {
   static const double deliveryFee = 2.50; // flat delivery fee
   static const double taxRate = 0.09; // 9% sales tax
 
+  // Feature gates
+  // Firebase Storage requires the Blaze plan; the project stays on Spark, so
+  // device image upload is gated OFF. The upload code (MenuImageUploader) is
+  // built and ready — flip this to true once Storage is enabled.
+  static const bool storageUploadEnabled = false;
+
   // Networking
   // Max time to wait on a Firestore read before falling back to mock data, so
   // an unreachable/slow backend never leaves the UI stuck on a loading spinner.
