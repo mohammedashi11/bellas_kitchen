@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/utils/result.dart';
-import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../order/domain/entities/order.dart';
 import '../../../order/domain/entities/order_status.dart';
 import '../../../order/domain/order_transition.dart';
@@ -11,20 +10,17 @@ import '../../../order/presentation/providers/order_providers.dart';
 import '../admin_order_view.dart';
 import '../theme/admin_colors.dart';
 
-/// Admin home ("Order Manager"). The Orders tab is the live-orders feature; the
-/// other bottom-nav tabs are placeholders (History / Inventory / Settings are
-/// separate roadmap items).
-class AdminOrderManagerScreen extends ConsumerStatefulWidget {
-  const AdminOrderManagerScreen({super.key});
+/// The Live Orders (Order Manager) content — the admin's "Orders" tab. Returns
+/// just the body column; the shared admin shell provides the bottom nav.
+class AdminLiveOrdersView extends ConsumerStatefulWidget {
+  const AdminLiveOrdersView({super.key});
 
   @override
-  ConsumerState<AdminOrderManagerScreen> createState() =>
-      _AdminOrderManagerScreenState();
+  ConsumerState<AdminLiveOrdersView> createState() =>
+      _AdminLiveOrdersViewState();
 }
 
-class _AdminOrderManagerScreenState
-    extends ConsumerState<AdminOrderManagerScreen> {
-  int _navIndex = 0;
+class _AdminLiveOrdersViewState extends ConsumerState<AdminLiveOrdersView> {
   AdminOrderTab _tab = AdminOrderTab.incoming;
   final Set<String> _busy = {};
   final Map<String, String> _errors = {};
@@ -34,8 +30,9 @@ class _AdminOrderManagerScreenState
       _busy.add(orderId);
       _errors.remove(orderId);
     });
-    final result =
-        await ref.read(orderRepositoryProvider).updateOrderStatus(orderId, next);
+    final result = await ref
+        .read(orderRepositoryProvider)
+        .updateOrderStatus(orderId, next);
     if (!mounted) return;
     final err = result.fold<String?>(
       onSuccess: (_) => null,
@@ -53,33 +50,6 @@ class _AdminOrderManagerScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AdminColors.background,
-      body: SafeArea(
-        bottom: false,
-        child: IndexedStack(
-          index: _navIndex,
-          children: [
-            _liveOrders(),
-            const _AdminPlaceholder(
-                title: 'History', icon: Icons.history_rounded),
-            const _AdminPlaceholder(
-                title: 'Inventory', icon: Icons.inventory_2_outlined),
-            _SettingsPlaceholder(
-              onSignOut: () =>
-                  ref.read(authControllerProvider.notifier).signOut(),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: _AdminBottomNav(
-        index: _navIndex,
-        onTap: (i) => setState(() => _navIndex = i),
-      ),
-    );
-  }
-
-  Widget _liveOrders() {
     final async = ref.watch(adminOrdersProvider);
     final orders = async.asData?.value ?? const <Order>[];
     final activeCount = orders.where((o) => !o.status.isTerminal).length;
@@ -123,7 +93,9 @@ class _AdminOrderManagerScreenState
 
   String _errorMessage(Object e) {
     final s = e.toString();
-    return s.isEmpty ? 'Could not load orders.' : s.replaceFirst('Exception: ', '');
+    return s.isEmpty
+        ? 'Could not load orders.'
+        : s.replaceFirst('Exception: ', '');
   }
 }
 
@@ -265,9 +237,7 @@ class _OrderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final next = forwardStatus(order.status);
-    final items = order.items
-        .map((i) => '${i.quantity}x ${i.name}')
-        .join(', ');
+    final items = order.items.map((i) => '${i.quantity}x ${i.name}').join(', ');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -371,7 +341,7 @@ class _OrderCard extends StatelessWidget {
       );
     }
 
-    // Terminal (delivered/cancelled): no actions, just a status chip.
+    // Terminal (delivered/cancelled): no actions, just a status label.
     if (next == null && order.status.isTerminal) {
       return Align(
         alignment: Alignment.centerLeft,
@@ -517,138 +487,6 @@ class _ErrorBody extends StatelessWidget {
                 style: GoogleFonts.poppins(
                     fontSize: 13, color: AdminColors.textSecondary)),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Placeholders for the other admin tabs ────────────────────────────────────
-
-class _AdminPlaceholder extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  const _AdminPlaceholder({required this.title, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: AdminColors.textHint, size: 52),
-          const SizedBox(height: 14),
-          Text(title,
-              style: GoogleFonts.poppins(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: AdminColors.textPrimary)),
-          const SizedBox(height: 6),
-          Text('Coming soon',
-              style: GoogleFonts.poppins(
-                  fontSize: 14, color: AdminColors.textSecondary)),
-        ],
-      ),
-    );
-  }
-}
-
-class _SettingsPlaceholder extends StatelessWidget {
-  final VoidCallback onSignOut;
-  const _SettingsPlaceholder({required this.onSignOut});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.settings_outlined,
-              color: AdminColors.textHint, size: 52),
-          const SizedBox(height: 14),
-          Text('Settings',
-              style: GoogleFonts.poppins(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: AdminColors.textPrimary)),
-          const SizedBox(height: 6),
-          Text('Coming soon',
-              style: GoogleFonts.poppins(
-                  fontSize: 14, color: AdminColors.textSecondary)),
-          const SizedBox(height: 24),
-          TextButton.icon(
-            onPressed: onSignOut,
-            icon: const Icon(Icons.logout_rounded,
-                color: AdminColors.accent, size: 18),
-            label: Text('Sign out',
-                style: GoogleFonts.poppins(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: AdminColors.accent)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Bottom nav ───────────────────────────────────────────────────────────────
-
-class _AdminBottomNav extends StatelessWidget {
-  final int index;
-  final ValueChanged<int> onTap;
-  const _AdminBottomNav({required this.index, required this.onTap});
-
-  static const _items = [
-    (Icons.receipt_long_rounded, 'Orders'),
-    (Icons.history_rounded, 'History'),
-    (Icons.inventory_2_outlined, 'Inventory'),
-    (Icons.settings_outlined, 'Settings'),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: AdminColors.surface,
-        border: Border(top: BorderSide(color: AdminColors.border, width: 0.5)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 62,
-          child: Row(
-            children: [
-              for (var i = 0; i < _items.length; i++)
-                Expanded(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => onTap(i),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(_items[i].$1,
-                            size: 22,
-                            color: i == index
-                                ? AdminColors.accentBright
-                                : AdminColors.textHint),
-                        const SizedBox(height: 4),
-                        Text(_items[i].$2,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.poppins(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: i == index
-                                    ? AdminColors.accentBright
-                                    : AdminColors.textHint)),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          ),
         ),
       ),
     );

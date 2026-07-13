@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/admin/presentation/screens/admin_login_screen.dart';
-import '../../features/admin/presentation/screens/admin_order_manager_screen.dart';
+import '../../features/admin/presentation/screens/admin_shell_screen.dart';
 import '../../features/auth/presentation/providers/auth_providers.dart';
 import '../../features/auth/presentation/providers/auth_state.dart';
 import '../../features/auth/presentation/screens/otp_screen.dart';
@@ -124,7 +124,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppConstants.routeAdminDashboard,
         name: 'adminDashboard',
-        builder: (context, state) => const AdminOrderManagerScreen(),
+        builder: (context, state) => const AdminShellScreen(),
       ),
     ],
   );
