@@ -110,56 +110,68 @@ class _StatGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final best = stats.bestSellerName;
+    // Each row is wrapped in IntrinsicHeight so CrossAxisAlignment.stretch has
+    // a BOUNDED cross axis to fill (the tallest card's intrinsic height).
+    // Bare `stretch` here previously crashed with "BoxConstraints forces an
+    // infinite height": this Column lives in a ListView, which lays children
+    // out with unbounded max-height, so stretch made the tight child height
+    // infinite. IntrinsicHeight keeps the cards equal-height per row with no
+    // hardcoded dimensions, so the grid stays responsive at any window width.
     return Column(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _StatCard(
-                icon: Icons.shopping_cart_outlined,
-                iconColor: AdminColors.accentBright,
-                label: 'ORDERS',
-                value: '${stats.todaysOrderCount}',
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _StatCard(
+                  icon: Icons.shopping_cart_outlined,
+                  iconColor: AdminColors.accentBright,
+                  label: 'ORDERS',
+                  value: '${stats.todaysOrderCount}',
+                ),
               ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: _StatCard(
-                icon: Icons.payments_outlined,
-                iconColor: AdminColors.accentBright,
-                label: 'REVENUE',
-                value: '\$${stats.todaysRevenue.toStringAsFixed(0)}',
+              const SizedBox(width: 14),
+              Expanded(
+                child: _StatCard(
+                  icon: Icons.payments_outlined,
+                  iconColor: AdminColors.accentBright,
+                  label: 'REVENUE',
+                  value: '\$${stats.todaysRevenue.toStringAsFixed(0)}',
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         const SizedBox(height: 14),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: _StatCard(
-                icon: Icons.schedule_rounded,
-                iconColor: const Color(0xFFF59E0B),
-                label: 'PENDING',
-                value: '${stats.pendingCount}',
-                subtitle: 'Action required',
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _StatCard(
+                  icon: Icons.schedule_rounded,
+                  iconColor: const Color(0xFFF59E0B),
+                  label: 'PENDING',
+                  value: '${stats.pendingCount}',
+                  subtitle: 'Action required',
+                ),
               ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: _StatCard(
-                icon: Icons.star_border_rounded,
-                iconColor: AdminColors.accentBright,
-                label: 'BEST SELLER',
-                value: best ?? '—',
-                valueFontSize: best == null ? 26 : 19,
-                subtitle: best == null
-                    ? 'No sales today'
-                    : '${stats.bestSellerCount} sold today',
+              const SizedBox(width: 14),
+              Expanded(
+                child: _StatCard(
+                  icon: Icons.star_border_rounded,
+                  iconColor: AdminColors.accentBright,
+                  label: 'BEST SELLER',
+                  value: best ?? '—',
+                  valueFontSize: best == null ? 26 : 19,
+                  subtitle: best == null
+                      ? 'No sales today'
+                      : '${stats.bestSellerCount} sold today',
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
@@ -198,12 +210,19 @@ class _StatCard extends StatelessWidget {
           Row(
             children: [
               Icon(icon, color: iconColor, size: 22),
-              const Spacer(),
-              Text(label,
-                  style: GoogleFonts.robotoMono(
-                      fontSize: 11,
-                      letterSpacing: 1.2,
-                      color: AdminColors.textSecondary)),
+              const SizedBox(width: 8),
+              // Flexible + ellipsis so long labels (BEST SELLER) can't
+              // overflow a narrow card.
+              Expanded(
+                child: Text(label,
+                    textAlign: TextAlign.right,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.robotoMono(
+                        fontSize: 11,
+                        letterSpacing: 1.2,
+                        color: AdminColors.textSecondary)),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -240,12 +259,17 @@ class _RecentHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Text('Recent Orders',
-            style: GoogleFonts.poppins(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: AdminColors.textPrimary)),
-        const Spacer(),
+        // Expanded + ellipsis so the title can't push VIEW ALL off-screen at
+        // narrow window widths.
+        Expanded(
+          child: Text('Recent Orders',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.poppins(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: AdminColors.textPrimary)),
+        ),
         GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onViewAll,

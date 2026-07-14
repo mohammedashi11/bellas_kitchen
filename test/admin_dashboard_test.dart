@@ -1,11 +1,17 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:bellas_kitchen/core/utils/result.dart';
 import 'package:bellas_kitchen/features/admin/presentation/admin_order_view.dart';
 import 'package:bellas_kitchen/features/admin/presentation/dashboard_stats.dart';
+import 'package:bellas_kitchen/features/admin/presentation/screens/admin_dashboard_screen.dart';
 import 'package:bellas_kitchen/features/order/domain/entities/order.dart';
 import 'package:bellas_kitchen/features/order/domain/entities/order_item.dart';
 import 'package:bellas_kitchen/features/order/domain/entities/order_status.dart';
 import 'package:bellas_kitchen/features/order/domain/entities/payment_method.dart';
+import 'package:bellas_kitchen/features/order/domain/repositories/order_repository.dart';
+import 'package:bellas_kitchen/features/order/presentation/providers/order_providers.dart';
 
 // Fixed local "now" for deterministic today-filtering.
 final _now = DateTime(2024, 6, 15, 12, 0);
@@ -37,6 +43,35 @@ Order _order({
 
 OrderItem _item(String name, int qty) =>
     OrderItem(menuItemId: name, name: name, price: 1, quantity: qty);
+
+/// Emits one order so the dashboard renders stat cards + a recent-order row.
+class _FakeOrderRepo implements OrderRepository {
+  @override
+  Stream<Result<List<Order>>> watchAllOrders() => Stream.value(Success([
+        _order(
+            id: 'abcd9021',
+            createdAt: DateTime.now(),
+            status: OrderStatus.preparing,
+            items: [_item('Burger', 2)],
+            total: 34.20),
+      ]));
+
+  @override
+  Future<Result<Order>> placeOrder(Order order) async => Success(order);
+
+  @override
+  Stream<Result<Order>> watchOrder(String orderId) =>
+      Stream<Result<Order>>.empty();
+
+  @override
+  Stream<Result<List<Order>>> watchUserOrders(String userId) =>
+      Stream<Result<List<Order>>>.empty();
+
+  @override
+  Future<Result<void>> updateOrderStatus(
+          String orderId, OrderStatus newStatus) async =>
+      const Success(null);
+}
 
 void main() {
   group('computeDashboardStats', () {
@@ -126,6 +161,49 @@ void main() {
       ], now: _now);
       expect(s.bestSellerName, 'Wings');
       expect(s.bestSellerCount, 2);
+    });
+  });
+
+  // ── Regression: dashboard layout at narrow and wide viewports ──────────────
+  // The 2×2 stat grid previously used bare CrossAxisAlignment.stretch inside a
+  // ListView (unbounded height) → "BoxConstraints forces an infinite height"
+  // and a blank admin shell. These renders fail if that ever regresses.
+  group('AdminDashboardScreen renders without layout exceptions', () {
+    Widget harness() => ProviderScope(
+          overrides: [
+            orderRepositoryProvider.overrideWithValue(_FakeOrderRepo()),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: AdminDashboardScreen(onViewAllOrders: () {}),
+            ),
+          ),
+        );
+
+    Future<void> renderAt(WidgetTester tester, Size size) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(harness());
+      await tester.pump(); // stream emission
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('ORDERS'), findsOneWidget);
+      expect(find.text('REVENUE'), findsOneWidget);
+      expect(find.text('PENDING'), findsOneWidget);
+      expect(find.text('BEST SELLER'), findsOneWidget);
+      expect(find.text('Recent Orders'), findsOneWidget);
+    }
+
+    testWidgets('narrow (380px) admin window', (tester) async {
+      await renderAt(tester, const Size(380, 900));
+    });
+
+    testWidgets('wide (1280px) admin window', (tester) async {
+      await renderAt(tester, const Size(1280, 900));
     });
   });
 
