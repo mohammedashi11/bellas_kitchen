@@ -43,3 +43,14 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# ─── Firebase config (developer-supplied) ─────────────────────────────────────
+# Client-side Firebase config, kept OUT of the repo as a matter of hygiene.
+# These are NOT high-severity secrets (Firestore security rules are the real
+# protection), but each developer/CI supplies their own locally. To build after
+# cloning, run `flutterfire configure` (regenerates firebase_options.dart +
+# platform files) or drop in your project's copies.
+android/app/google-services.json
+lib/firebase_options.dart
+ios/Runner/GoogleService-Info.plist
+macos/Runner/GoogleService-Info.plist
