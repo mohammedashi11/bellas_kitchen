@@ -41,10 +41,11 @@ Extensions: `isSuccess`, `isFailure`, `dataOrNull`, `errorOrNull` (→ `AppFailu
 Data layers map low-level exceptions into an `AppFailure` and wrap it in
 `Failure<S>`. The old `lib/core/errors/failures.dart` has been **deleted**.
 
-> Current state: `FirestoreMenuRepository` never emits `Failure` today — on any
-> error it falls back to mock data and returns `Success` (dev-only behavior).
-> The typed `Failure<AppFailure>` channel exists for the repositories added next
-> (Order, User, Auth).
+> All repositories (Menu, Order, Auth) emit typed `Failure<AppFailure>` on
+> error. The menu's dev-only mock fallback has been REMOVED: `menu_items` in
+> Firestore is the single source of truth — an empty collection reads as an
+> empty list and errors surface as failures; the UI owns loading/empty/error
+> states.
 
 ---
 

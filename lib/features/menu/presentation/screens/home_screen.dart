@@ -61,9 +61,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             Expanded(
               child: menuAsync.when(
                 loading: () => _LoadingList(),
-                error: (e, _) => _ErrorView(message: e.toString()),
+                error: (e, _) => _ErrorView(
+                  message: e.toString().replaceFirst('Exception: ', ''),
+                  onRetry: () => ref.invalidate(menuItemsProvider),
+                ),
                 data: (items) => items.isEmpty
-                    ? const _EmptyView()
+                    ? _EmptyView(
+                        isWholeMenu: ref.read(selectedCategoryProvider) ==
+                            AppConstants.categoryAll,
+                      )
                     : ListView.builder(
                         padding: const EdgeInsets.only(bottom: 8),
                         itemCount: items.length,
@@ -262,7 +268,8 @@ class _SkeletonLine extends StatelessWidget {
 
 class _ErrorView extends StatelessWidget {
   final String message;
-  const _ErrorView({required this.message});
+  final VoidCallback onRetry;
+  const _ErrorView({required this.message, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -288,6 +295,19 @@ class _ErrorView extends StatelessWidget {
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),
+            const SizedBox(height: 18),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: AppColors.accent),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded,
+                  color: AppColors.accent, size: 18),
+              label: Text('Retry',
+                  style: AppTextStyles.cartBarAction),
+            ),
           ],
         ),
       ),
@@ -298,7 +318,9 @@ class _ErrorView extends StatelessWidget {
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
 class _EmptyView extends StatelessWidget {
-  const _EmptyView();
+  /// True when the WHOLE menu is empty ('All' tab), not just one category.
+  final bool isWholeMenu;
+  const _EmptyView({required this.isWholeMenu});
 
   @override
   Widget build(BuildContext context) {
@@ -310,7 +332,9 @@ class _EmptyView extends StatelessWidget {
               color: AppColors.textHint, size: 56),
           const SizedBox(height: 12),
           Text(
-            'No items in this category',
+            isWholeMenu
+                ? 'Menu coming soon — check back shortly!'
+                : 'No items in this category',
             style: AppTextStyles.itemDescription,
           ),
         ],
