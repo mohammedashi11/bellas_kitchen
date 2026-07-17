@@ -43,3 +43,18 @@ final adminOrdersProvider = StreamProvider<List<Order>>((ref) {
         ),
       );
 });
+
+/// The signed-in customer's own order history, newest first (Profile / Orders
+/// tab). No user signed in → an empty list (not an error). Reuses
+/// [currentUserProvider] and the same repository; no extra plumbing.
+final userOrdersProvider = StreamProvider<List<Order>>((ref) {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return Stream.value(const <Order>[]);
+  final repo = ref.watch(orderRepositoryProvider);
+  return repo.watchUserOrders(user.uid).map(
+        (result) => result.fold(
+          onSuccess: (orders) => orders,
+          onFailure: (failure) => throw failure,
+        ),
+      );
+});

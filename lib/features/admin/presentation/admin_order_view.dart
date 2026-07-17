@@ -1,5 +1,9 @@
 import '../../order/domain/entities/order_status.dart';
 
+// `orderNumber` now lives in the shared order display helper; re-exported here
+// so existing admin call sites keep importing it from this file unchanged.
+export '../../order/presentation/order_display.dart' show orderNumber;
+
 /// Admin filter tabs and the [OrderStatus] group each maps to.
 ///
 /// Grouping (noted): New = `pending`; Preparing = `accepted` + `preparing`;
@@ -34,13 +38,6 @@ enum AdminOrderTab {
 /// Whether an order with [status] belongs under [tab].
 bool orderInTab(OrderStatus status, AdminOrderTab tab) =>
     tab.statuses.contains(status);
-
-/// Short, human display order number from a Firestore doc id, e.g. "#BK-9025".
-String orderNumber(String id) {
-  if (id.isEmpty) return '#BK-0000';
-  final tail = id.length >= 4 ? id.substring(id.length - 4) : id;
-  return '#BK-${tail.toUpperCase()}';
-}
 
 /// Cheap customer label derived from a userId — NO Firestore read (avoids an
 /// N+1 per order). Orders only carry `userId`; a real name would be denormalized

@@ -13,8 +13,9 @@ import '../../features/menu/domain/entities/menu_item.dart';
 import '../../features/menu/presentation/screens/home_screen.dart';
 import '../../features/menu/presentation/screens/item_detail_screen.dart';
 import '../../features/order/domain/entities/order.dart';
+import '../../features/order/presentation/screens/order_history_screen.dart';
 import '../../features/order/presentation/screens/order_tracking_screen.dart';
-import '../../shared/widgets/coming_soon_screen.dart';
+import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../constants/app_constants.dart';
 
 /// App router, built inside Riverpod so the redirect guard can read auth state.
@@ -94,12 +95,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppConstants.routeOrders,
         name: 'orders',
-        builder: (context, state) => const ComingSoonScreen(title: 'Orders'),
+        builder: (context, state) => const OrderHistoryScreen(),
       ),
       GoRoute(
         path: AppConstants.routeProfile,
         name: 'profile',
-        builder: (context, state) => const ComingSoonScreen(title: 'Profile'),
+        builder: (context, state) => const ProfileScreen(),
       ),
       GoRoute(
         path: AppConstants.routePhoneEntry,

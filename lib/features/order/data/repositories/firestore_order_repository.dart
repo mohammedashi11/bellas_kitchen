@@ -95,16 +95,18 @@ class FirestoreOrderRepository implements OrderRepository {
       return;
     }
     try {
-      // NOTE: this where + orderBy requires a composite index on `orders`
-      // (userId ASC, createdAt DESC). See the feature summary for the exact
-      // index to create in the Firebase console.
-      final query = orders
-          .where(AppConstants.fieldUserId, isEqualTo: userId)
-          .orderBy(AppConstants.fieldCreatedAt, descending: true);
+      // Keep the userId equality filter — Firestore rules only allow a customer
+      // to read their OWN orders, so the query MUST be constrained to them (an
+      // unconstrained read would be denied). Deliberately NO orderBy: that would
+      // need a composite index (userId + createdAt); instead we sort newest-first
+      // client-side. A lone equality filter uses only the auto single-field index.
+      final query = orders.where(AppConstants.fieldUserId, isEqualTo: userId);
       await for (final snap in query.snapshots()) {
-        yield Success(
-          snap.docs.map((d) => OrderModel.fromMap(d.id, d.data())).toList(),
-        );
+        final items = snap.docs
+            .map((d) => OrderModel.fromMap(d.id, d.data()))
+            .toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        yield Success(items);
       }
     } on FirebaseException catch (e) {
       yield Failure(_mapFirestore(e.code, e.message));
