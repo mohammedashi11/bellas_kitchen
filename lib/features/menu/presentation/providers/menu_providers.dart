@@ -21,6 +21,13 @@ final selectedCategoryProvider = StateProvider<String>((ref) {
 });
 
 // ---------------------------------------------------------------------------
+// Search query state
+// ---------------------------------------------------------------------------
+final searchQueryProvider = StateProvider<String>((ref) {
+  return '';
+});
+
+// ---------------------------------------------------------------------------
 // Menu items provider.
 //
 // The repository returns a clean Result and owns any mock-data fallback, so
@@ -42,7 +49,20 @@ final menuItemsProvider =
 // ---------------------------------------------------------------------------
 final filteredMenuItemsProvider = Provider<AsyncValue<List<MenuItem>>>((ref) {
   final category = ref.watch(selectedCategoryProvider);
-  return ref.watch(menuItemsProvider(category));
+  final query = ref.watch(searchQueryProvider).trim().toLowerCase();
+  final itemsAsync = ref.watch(menuItemsProvider(category));
+
+  if (query.isEmpty) {
+    return itemsAsync;
+  }
+
+  return itemsAsync.whenData((items) {
+    return items.where((item) {
+      final nameMatches = item.name.toLowerCase().contains(query);
+      final descMatches = item.description.toLowerCase().contains(query);
+      return nameMatches || descMatches;
+    }).toList();
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -40,6 +40,7 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
     final ordersAsync = ref.watch(userOrdersProvider);
+    final isGuest = user == null || user.phoneNumber.trim().isEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -88,13 +89,20 @@ class ProfileScreen extends ConsumerWidget {
                 onTap: () => _comingSoon(context, 'Help & Support'),
               ),
               const _MenuDivider(),
-              _MenuRow(
-                icon: Icons.logout_rounded,
-                label: 'Log Out',
-                destructive: true,
-                showChevron: false,
-                onTap: () => _logOut(context, ref),
-              ),
+              if (isGuest)
+                _MenuRow(
+                  icon: Icons.login_rounded,
+                  label: 'Sign In',
+                  onTap: () => context.push(AppConstants.routePhoneEntry),
+                )
+              else
+                _MenuRow(
+                  icon: Icons.logout_rounded,
+                  label: 'Log Out',
+                  destructive: true,
+                  showChevron: false,
+                  onTap: () => _logOut(context, ref),
+                ),
             ]),
             const SizedBox(height: 28),
             Row(
@@ -148,12 +156,12 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   String _subtitle(AppUser? u) {
-    if (u == null) return 'Guest account';
+    if (u == null || u.phoneNumber.trim().isEmpty) return 'Sign in to save your history';
     final name = u.displayName?.trim();
     final hasName = name != null && name.isNotEmpty;
     // Show phone as the subtitle only when it isn't already the headline name.
     if (hasName && u.phoneNumber.trim().isNotEmpty) return u.phoneNumber;
-    return 'Guest account';
+    return 'Phone verified';
   }
 }
 

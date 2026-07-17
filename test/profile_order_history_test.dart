@@ -149,15 +149,25 @@ void main() {
       await tester.pump();
 
       expect(find.text('Guest'), findsOneWidget);
-      expect(find.text('Guest account'), findsOneWidget);
+      expect(find.text('Sign in to save your history'), findsOneWidget);
+      expect(find.text('Sign In'), findsOneWidget);
+      expect(find.text('Log Out'), findsNothing);
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Log Out calls signOut and routes home', (tester) async {
+    testWidgets('Log Out calls signOut and routes home for authenticated user', (tester) async {
       final auth = _FakeAuthRepository();
+      final user = AppUser(
+        uid: 'u1',
+        phoneNumber: '+15550123456',
+        createdAt: DateTime.utc(2024, 1, 1),
+      );
       await tester.pumpWidget(_harness(
-          initial: '/profile', orders: const [], user: null, auth: auth));
+          initial: '/profile', orders: const [], user: user, auth: auth));
       await tester.pump();
+
+      expect(find.text('Log Out'), findsOneWidget);
+      expect(find.text('Sign In'), findsNothing);
 
       await tester.tap(find.text('Log Out'));
       await tester.pumpAndSettle();

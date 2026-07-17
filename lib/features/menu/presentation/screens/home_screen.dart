@@ -50,7 +50,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             const SizedBox(height: 16),
 
             // ── Search Bar ────────────────────────────────────────────
-            const SearchBarWidget(),
+            SearchBarWidget(
+              onChanged: (query) {
+                ref.read(searchQueryProvider.notifier).state = query;
+              },
+            ),
             const SizedBox(height: 16),
 
             // ── Category Tabs ─────────────────────────────────────────
@@ -69,6 +73,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ? _EmptyView(
                         isWholeMenu: ref.read(selectedCategoryProvider) ==
                             AppConstants.categoryAll,
+                        hasSearchQuery: ref.read(searchQueryProvider).trim().isNotEmpty,
                       )
                     : ListView.builder(
                         padding: const EdgeInsets.only(bottom: 8),
@@ -320,10 +325,26 @@ class _ErrorView extends StatelessWidget {
 class _EmptyView extends StatelessWidget {
   /// True when the WHOLE menu is empty ('All' tab), not just one category.
   final bool isWholeMenu;
-  const _EmptyView({required this.isWholeMenu});
+  final bool hasSearchQuery;
+  const _EmptyView({required this.isWholeMenu, this.hasSearchQuery = false});
 
   @override
   Widget build(BuildContext context) {
+    if (hasSearchQuery) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.search_off_rounded, color: AppColors.textHint, size: 56),
+            const SizedBox(height: 12),
+            Text(
+              'No items match your search',
+              style: AppTextStyles.itemDescription,
+            ),
+          ],
+        ),
+      );
+    }
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
