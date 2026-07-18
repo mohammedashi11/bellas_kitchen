@@ -54,9 +54,23 @@ Widget _harness() {
   );
 }
 
+/// Tall viewport so every seeded card is built.
+///
+/// The menu is a lazy `ListView.builder` and a card is ~300px tall (16:9 image
+/// + text), so the default 800x600 test surface only ever builds the FIRST
+/// card — asserting on an unfiltered list would fail for off-screen items.
+/// Same approach as order_tracking_test.dart.
+void useTallViewport(WidgetTester tester) {
+  tester.view.physicalSize = const Size(800, 2000);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+}
+
 void main() {
   group('HomeScreen Search', () {
     testWidgets('search filters by name case-insensitively', (tester) async {
+      useTallViewport(tester);
       await tester.pumpWidget(_harness());
       await tester.pumpAndSettle();
 
@@ -72,6 +86,7 @@ void main() {
     });
 
     testWidgets('search filters by description', (tester) async {
+      useTallViewport(tester);
       await tester.pumpWidget(_harness());
       await tester.pumpAndSettle();
 
@@ -83,6 +98,7 @@ void main() {
     });
 
     testWidgets('search empty state displays correctly', (tester) async {
+      useTallViewport(tester);
       await tester.pumpWidget(_harness());
       await tester.pumpAndSettle();
 
@@ -94,6 +110,7 @@ void main() {
     });
 
     testWidgets('clearing search restores the list', (tester) async {
+      useTallViewport(tester);
       await tester.pumpWidget(_harness());
       await tester.pumpAndSettle();
 

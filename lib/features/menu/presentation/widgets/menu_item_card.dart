@@ -82,23 +82,27 @@ class _FoodImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // A blank imageUrl is a REAL case, not just a test fixture: MenuItemModel
+    // defaults a missing `imageUrl` field to '' on read, and device upload is
+    // gated off (AppConstants.storageUploadEnabled), so items genuinely ship
+    // without an image. Handing '' to CachedNetworkImage leaves it stuck in its
+    // placeholder forever — the shimmer would loop indefinitely and the item
+    // would never fall back to the icon below. Short-circuit to the fallback so
+    // "no image" renders as a settled, final state instead of endless loading.
+    final hasImage = item.imageUrl.trim().isNotEmpty;
+
     return Stack(
       children: [
         AspectRatio(
           aspectRatio: 16 / 9,
-          child: CachedNetworkImage(
-            imageUrl: item.imageUrl,
-            fit: BoxFit.cover,
-            placeholder: (_, _) => _Shimmer(),
-            errorWidget: (context, url, error) => Container(
-              color: AppColors.surface,
-              child: const Icon(
-                Icons.restaurant,
-                color: AppColors.textSecondary,
-                size: 48,
-              ),
-            ),
-          ),
+          child: hasImage
+              ? CachedNetworkImage(
+                  imageUrl: item.imageUrl,
+                  fit: BoxFit.cover,
+                  placeholder: (_, _) => _Shimmer(),
+                  errorWidget: (_, _, _) => const _ImageFallback(),
+                )
+              : const _ImageFallback(),
         ),
         // Gradient overlay at bottom of image for readability
         Positioned(
@@ -134,6 +138,26 @@ class _FoodImage extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+// ─── Image fallback ──────────────────────────────────────────────────────────
+
+/// Shown when an item has no image URL, or its image fails to load. One
+/// definition so both paths render identically.
+class _ImageFallback extends StatelessWidget {
+  const _ImageFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.surface,
+      child: const Icon(
+        Icons.restaurant,
+        color: AppColors.textSecondary,
+        size: 48,
+      ),
     );
   }
 }
