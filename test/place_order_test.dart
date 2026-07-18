@@ -42,6 +42,9 @@ class FakeOrderRepository implements OrderRepository {
   Future<Result<void>> updateOrderStatus(
           String orderId, OrderStatus newStatus) =>
       throw UnimplementedError();
+
+  @override
+  Future<Result<void>> cancelOrder(String orderId) => throw UnimplementedError();
 }
 
 /// Only `signInAnonymously` is exercised by PlaceOrderUseCase; the rest are

@@ -71,6 +71,9 @@ class _FakeOrderRepo implements OrderRepository {
   Future<Result<void>> updateOrderStatus(
           String orderId, OrderStatus newStatus) async =>
       const Success(null);
+
+  @override
+  Future<Result<void>> cancelOrder(String orderId) async => const Success(null);
 }
 
 void main() {

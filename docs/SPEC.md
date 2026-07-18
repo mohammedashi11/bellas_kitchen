@@ -146,20 +146,37 @@ Order features.
 Enum: `pending, accepted, preparing, ready, delivered, cancelled`.
 
 Happy path: `pending → accepted → preparing → ready → delivered`.
-Any non-terminal status may go to `cancelled`. `delivered` and `cancelled` are
-terminal.
+**`cancelled` is reachable ONLY from `pending`** — once the kitchen accepts an
+order, food is committed and it can only move forward. `delivered` and
+`cancelled` are terminal.
 
 | From | Allowed next |
 |---|---|
 | `pending` | `accepted`, `cancelled` |
-| `accepted` | `preparing`, `cancelled` |
-| `preparing` | `ready`, `cancelled` |
-| `ready` | `delivered`, `cancelled` |
+| `accepted` | `preparing` |
+| `preparing` | `ready` |
+| `ready` | `delivered` |
 | `delivered` | — (terminal) |
 | `cancelled` | — (terminal) |
 
 Helpers on the enum: `displayLabel`, `storageKey`, `allowedNextStatuses`,
 `canTransitionTo(next)`, `isTerminal`, `fromStorage(key)`.
+
+`allowedNextStatuses` is the **single source of truth** for the cancel rule. It
+is enforced at three layers, none of which restates the rule:
+
+1. **Domain** — `validateTransition(from, to)` derives from `canTransitionTo`.
+2. **Repository** — `cancelOrder(orderId)` and `updateOrderStatus(...)` share one
+   private read-current → validate → write path in `FirestoreOrderRepository`,
+   so both reject an illegal move identically (`ValidationFailure`, no write).
+3. **Firestore rules** — the owner may update their own order to `cancelled`
+   only when the *stored* status is `pending`, and only `status` + `updatedAt`
+   may change (`affectedKeys().hasOnly`), so a "cancel" can't rewrite `total`,
+   `items` or `userId`. Admin update rights are unchanged.
+
+UI policy: `canCancelOrder(status)` (`order_stage.dart`) gates the tracking
+screen's Cancel link to `pending`, which now matches the domain rule exactly.
+Admin-side, REJECT is only offered on a `pending` order.
 
 ---
 

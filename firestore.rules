@@ -27,16 +27,36 @@ service cloud.firestore {
       allow read, write: if isSignedIn() && request.auth.uid == uid;
     }
 
+    // The owner cancelling their OWN still-pending order. Deliberately narrow:
+    //   - caller owns the order,
+    //   - the STORED status is exactly 'pending' (so an accepted/preparing/
+    //     ready/delivered order can never be cancelled, and a cancelled one
+    //     can't be re-cancelled),
+    //   - the ONLY new status is 'cancelled' (no sneaking it back to pending or
+    //     forward to delivered),
+    //   - status + updatedAt are the ONLY fields touched, so a "cancel" cannot
+    //     also rewrite items, total, userId or deliveryAddress.
+    function isOwnerCancellingPendingOrder() {
+      return isSignedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && resource.data.status == 'pending'
+        && request.resource.data.status == 'cancelled'
+        && request.resource.data.diff(resource.data)
+             .affectedKeys().hasOnly(['status', 'updatedAt']);
+    }
+
     // Orders:
     //   - a customer CREATES and READS only their own order,
     //   - an admin READS all orders and UPDATES them (status changes),
+    //   - an owner may additionally CANCEL their own pending order (above),
     //   - nobody deletes.
     match /orders/{id} {
       allow create: if isSignedIn()
         && request.resource.data.userId == request.auth.uid;
       allow read: if isSignedIn()
         && (resource.data.userId == request.auth.uid || isAdmin());
-      allow update: if isAdmin();
+      allow update: if isAdmin() || isOwnerCancellingPendingOrder();
       allow delete: if false;
     }
   }

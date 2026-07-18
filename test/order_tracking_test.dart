@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:bellas_kitchen/core/error/app_failure.dart';
 import 'package:bellas_kitchen/core/utils/result.dart';
 import 'package:bellas_kitchen/features/order/domain/entities/order.dart';
 import 'package:bellas_kitchen/features/order/domain/entities/order_item.dart';
@@ -13,12 +16,23 @@ import 'package:bellas_kitchen/features/order/presentation/providers/order_provi
 import 'package:bellas_kitchen/features/order/presentation/screens/order_tracking_screen.dart';
 
 class _FakeOrderRepo implements OrderRepository {
+  /// When set, `watchOrder` emits from this controller so a test can push the
+  /// post-cancel order and assert the screen reacts to the STREAM (not to any
+  /// local widget state).
+  final StreamController<Result<Order>>? orderStream;
+
+  /// What `cancelOrder` returns, and the ids it was called with.
+  final Result<void> cancelResult;
+  final List<String> cancelledIds = [];
+
+  _FakeOrderRepo({this.orderStream, this.cancelResult = const Success(null)});
+
   @override
   Future<Result<Order>> placeOrder(Order order) async => Success(order);
 
   @override
   Stream<Result<Order>> watchOrder(String orderId) =>
-      Stream<Result<Order>>.empty();
+      orderStream?.stream ?? Stream<Result<Order>>.empty();
 
   @override
   Stream<Result<List<Order>>> watchUserOrders(String userId) =>
@@ -32,6 +46,12 @@ class _FakeOrderRepo implements OrderRepository {
   Future<Result<void>> updateOrderStatus(
           String orderId, OrderStatus newStatus) async =>
       const Success(null);
+
+  @override
+  Future<Result<void>> cancelOrder(String orderId) async {
+    cancelledIds.add(orderId);
+    return cancelResult;
+  }
 }
 
 Order _order(OrderStatus status) => Order(
@@ -140,8 +160,10 @@ void main() {
   });
 
   // ── Screen rendering ───────────────────────────────────────────────────────
-  Widget harness(Order order) => ProviderScope(
-        overrides: [orderRepositoryProvider.overrideWithValue(_FakeOrderRepo())],
+  Widget harness(Order order, {_FakeOrderRepo? repo}) => ProviderScope(
+        overrides: [
+          orderRepositoryProvider.overrideWithValue(repo ?? _FakeOrderRepo()),
+        ],
         child: MaterialApp(
           home: OrderTrackingScreen(orderId: order.id, initialOrder: order),
         ),
@@ -178,5 +200,107 @@ void main() {
     expect(find.text('This order was cancelled'), findsOneWidget);
     // Linear stepper is absent → its stage labels don't render.
     expect(find.text('Preparing'), findsNothing);
+  });
+
+  // ── Cancel flow ────────────────────────────────────────────────────────────
+  group('cancel order flow', () {
+    /// Taps the "Cancel Order" link (the tracking-screen one, not a dialog
+    /// button) and settles the confirm dialog into view.
+    Future<void> tapCancelLink(WidgetTester tester) async {
+      await tester.tap(find.text('Cancel Order'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('confirming calls cancelOrder with the route order id',
+        (tester) async {
+      useTallViewport(tester);
+      final repo = _FakeOrderRepo();
+      await tester.pumpWidget(harness(_order(OrderStatus.pending), repo: repo));
+      await tester.pump();
+
+      await tapCancelLink(tester);
+      expect(find.text('Cancel this order?'), findsOneWidget);
+      // Nothing is written until the user confirms.
+      expect(repo.cancelledIds, isEmpty);
+
+      // The dialog's confirm button is the SECOND "Cancel Order" text.
+      await tester.tap(find.text('Cancel Order').last);
+      await tester.pumpAndSettle();
+
+      expect(repo.cancelledIds, ['abc123def']);
+    });
+
+    testWidgets('dismissing with "Keep Order" writes nothing', (tester) async {
+      useTallViewport(tester);
+      final repo = _FakeOrderRepo();
+      await tester.pumpWidget(harness(_order(OrderStatus.pending), repo: repo));
+      await tester.pump();
+
+      await tapCancelLink(tester);
+      await tester.tap(find.text('Keep Order'));
+      await tester.pumpAndSettle();
+
+      expect(repo.cancelledIds, isEmpty);
+      expect(find.text('Cancel this order?'), findsNothing);
+    });
+
+    testWidgets('cancelled state arrives via the watchOrder stream',
+        (tester) async {
+      useTallViewport(tester);
+      final controller = StreamController<Result<Order>>();
+      addTearDown(controller.close);
+      final repo = _FakeOrderRepo(orderStream: controller);
+
+      await tester.pumpWidget(harness(_order(OrderStatus.pending), repo: repo));
+      controller.add(Success(_order(OrderStatus.pending)));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Estimated Delivery'), findsOneWidget);
+
+      await tapCancelLink(tester);
+      await tester.tap(find.text('Cancel Order').last);
+      await tester.pumpAndSettle();
+
+      // The screen still shows the ACTIVE order — it holds no local cancelled
+      // state; only the stream can flip it.
+      expect(find.textContaining('Estimated Delivery'), findsOneWidget);
+
+      controller.add(Success(_order(OrderStatus.cancelled)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Order Cancelled'), findsOneWidget);
+      expect(find.text('This order was cancelled'), findsOneWidget);
+    });
+
+    testWidgets('a typed failure surfaces its message', (tester) async {
+      useTallViewport(tester);
+      final repo = _FakeOrderRepo(
+        cancelResult: const Failure<void>(
+            UnauthorizedFailure("You don't have permission to do that.")),
+      );
+      await tester.pumpWidget(harness(_order(OrderStatus.pending), repo: repo));
+      await tester.pump();
+
+      await tapCancelLink(tester);
+      await tester.tap(find.text('Cancel Order').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text("You don't have permission to do that."),
+          findsOneWidget);
+    });
+
+    testWidgets('link is inert once the order is past pending', (tester) async {
+      useTallViewport(tester);
+      final repo = _FakeOrderRepo();
+      await tester
+          .pumpWidget(harness(_order(OrderStatus.preparing), repo: repo));
+      await tester.pump();
+
+      await tester.tap(find.text('Cancel Order'));
+      await tester.pumpAndSettle();
+
+      // No confirm dialog, no write.
+      expect(find.text('Cancel this order?'), findsNothing);
+      expect(repo.cancelledIds, isEmpty);
+    });
   });
 }

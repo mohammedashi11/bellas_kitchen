@@ -143,6 +143,25 @@ class FirestoreOrderRepository implements OrderRepository {
   Future<Result<void>> updateOrderStatus(
     String orderId,
     OrderStatus newStatus,
+  ) =>
+      _writeStatus(orderId, newStatus);
+
+  @override
+  Future<Result<void>> cancelOrder(String orderId) =>
+      // Same guarded write path as updateOrderStatus — the legality of
+      // `current → cancelled` is decided solely by OrderStatus.allowedNextStatuses
+      // (today: only from `pending`), so there is no second, drifting rule here.
+      _writeStatus(orderId, OrderStatus.cancelled);
+
+  /// Read current status → validate the transition → write. Shared by
+  /// [updateOrderStatus] and [cancelOrder] so both enforce the identical guard.
+  ///
+  /// Not transactional (fine for a single-admin panel plus an owner-initiated
+  /// cancel); the client only surfaces legal actions, and this rejects a
+  /// stale/illegal one server-read-side. Firestore rules are the real backstop.
+  Future<Result<void>> _writeStatus(
+    String orderId,
+    OrderStatus newStatus,
   ) async {
     final orders = _orders;
     if (orders == null) {
@@ -150,9 +169,6 @@ class FirestoreOrderRepository implements OrderRepository {
     }
     try {
       final ref = orders.doc(orderId);
-      // Read current status → validate the transition → write. Not transactional
-      // (fine for a single-admin panel); the client only surfaces legal actions,
-      // and this rejects a stale/illegal one server-read-side.
       final snap = await ref.get().timeout(AppConstants.firestoreTimeout);
       final data = snap.data();
       if (!snap.exists || data == null) {
@@ -217,6 +233,9 @@ class FirestoreOrderRepository implements OrderRepository {
       return const NetworkFailure(
           'Network error. Check your connection and try again.');
     }
-    return const UnknownFailure('Could not place your order. Please try again.');
+    // Neutral wording: this mapper is shared by placeOrder, status updates and
+    // cancellation, so it must not claim the failure was a failed *placement*.
+    return const UnknownFailure(
+        'Could not complete the request. Please try again.');
   }
 }

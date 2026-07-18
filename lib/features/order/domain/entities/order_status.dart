@@ -1,8 +1,10 @@
 /// Lifecycle state of an [Order]. Pure Dart.
 ///
 /// Happy path: pending → accepted → preparing → ready → delivered.
-/// An order may be cancelled from any non-terminal state. `delivered` and
-/// `cancelled` are terminal (no further transitions).
+/// Cancellation is allowed ONLY from [pending] — once the kitchen has accepted
+/// an order, food is committed and neither the customer nor an admin may cancel
+/// it from the app. `delivered` and `cancelled` are terminal (no further
+/// transitions).
 enum OrderStatus {
   pending,
   accepted,
@@ -26,11 +28,16 @@ enum OrderStatus {
 
   /// The set of statuses this status is allowed to transition to.
   /// Terminal statuses ([delivered], [cancelled]) return an empty set.
+  ///
+  /// [cancelled] is reachable ONLY from [pending]: an accepted order is already
+  /// being made, so it can only move forward. This is the single source of truth
+  /// for the rule — the customer cancel flow, the admin REJECT action and the
+  /// Firestore rules all enforce the same constraint.
   Set<OrderStatus> get allowedNextStatuses => switch (this) {
         OrderStatus.pending => {OrderStatus.accepted, OrderStatus.cancelled},
-        OrderStatus.accepted => {OrderStatus.preparing, OrderStatus.cancelled},
-        OrderStatus.preparing => {OrderStatus.ready, OrderStatus.cancelled},
-        OrderStatus.ready => {OrderStatus.delivered, OrderStatus.cancelled},
+        OrderStatus.accepted => {OrderStatus.preparing},
+        OrderStatus.preparing => {OrderStatus.ready},
+        OrderStatus.ready => {OrderStatus.delivered},
         OrderStatus.delivered => <OrderStatus>{},
         OrderStatus.cancelled => <OrderStatus>{},
       };

@@ -6,6 +6,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/error/app_failure.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/result.dart';
 import '../../domain/entities/order.dart';
 import '../../domain/entities/order_status.dart';
 import '../order_stage.dart';
@@ -54,6 +55,7 @@ class OrderTrackingScreen extends ConsumerWidget {
                   : order == null
                       ? _ErrorState(message: _messageFor(error))
                       : _Content(
+                          orderId: orderId,
                           order: order,
                           eta: _eta,
                           degraded: degraded,
@@ -113,11 +115,15 @@ class _TopBar extends StatelessWidget {
 // ─── Content ──────────────────────────────────────────────────────────────────
 
 class _Content extends StatelessWidget {
+  /// The route's order id — used for the cancel write. Preferred over
+  /// `order.id`, which is empty on the optimistic pre-write order.
+  final String orderId;
   final Order order;
   final String eta;
   final bool degraded;
 
   const _Content({
+    required this.orderId,
     required this.order,
     required this.eta,
     required this.degraded,
@@ -158,7 +164,7 @@ class _Content extends StatelessWidget {
         const SizedBox(height: 24),
         _ContactButton(),
         const SizedBox(height: 16),
-        _CancelLink(status: order.status),
+        _CancelLink(orderId: orderId, status: order.status),
       ],
     );
   }
@@ -546,30 +552,92 @@ class _ContactButton extends StatelessWidget {
   }
 }
 
-class _CancelLink extends StatelessWidget {
+/// "Cancel Order" action. Visible always, actionable only while the order is
+/// still cancellable ([canCancelOrder]).
+///
+/// Deliberately holds NO cancelled-state of its own: on success the screen
+/// flips to the cancelled view purely because [orderTrackingProvider]'s
+/// `watchOrder` stream re-emits the updated order. Only the in-flight `_busy`
+/// flag is local, to block a double tap.
+class _CancelLink extends ConsumerStatefulWidget {
+  final String orderId;
   final OrderStatus status;
-  const _CancelLink({required this.status});
+  const _CancelLink({required this.orderId, required this.status});
+
+  @override
+  ConsumerState<_CancelLink> createState() => _CancelLinkState();
+}
+
+class _CancelLinkState extends ConsumerState<_CancelLink> {
+  bool _busy = false;
+
+  Future<void> _onTap() async {
+    if (_busy) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.cardSurface,
+        title: Text('Cancel this order?', style: AppTextStyles.heading2),
+        content: Text(
+          "This can't be undone. You'll need to place a new order if you "
+          'change your mind.',
+          style: AppTextStyles.itemDescription,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text('Keep Order',
+                style: AppTextStyles.itemName
+                    .copyWith(color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text('Cancel Order',
+                style:
+                    AppTextStyles.itemName.copyWith(color: AppColors.accent)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _busy = true);
+    final result =
+        await ref.read(orderRepositoryProvider).cancelOrder(widget.orderId);
+    if (!mounted) return;
+    setState(() => _busy = false);
+
+    // Success needs no UI work here — the watchOrder stream drives the change.
+    // Surface the TYPED failure message so the user sees the real reason
+    // (permission, network, or an illegal transition) rather than a generic one.
+    final failure = result.errorOrNull;
+    if (failure != null) _snack(context, failure.message);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final enabled = canCancelOrder(status);
+    final enabled = canCancelOrder(widget.status) && !_busy;
     final color = enabled ? AppColors.textSecondary : AppColors.textHint;
     return Center(
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        // Cancellation write path is not implemented yet — see feature notes.
-        onTap: enabled
-            ? () => _snack(context,
-                'Order cancellation will be available soon.')
-            : null,
+        onTap: enabled ? _onTap : null,
         child: Opacity(
           opacity: enabled ? 1 : 0.5,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.cancel_outlined, color: color, size: 18),
+              if (_busy)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: AppColors.textHint),
+                )
+              else
+                Icon(Icons.cancel_outlined, color: color, size: 18),
               const SizedBox(width: 6),
-              Text('Cancel Order',
+              Text(_busy ? 'Cancelling…' : 'Cancel Order',
                   style: AppTextStyles.itemName
                       .copyWith(color: color, fontSize: 15)),
             ],

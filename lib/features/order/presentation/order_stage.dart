@@ -62,9 +62,12 @@ StageState stageStateFor(OrderStatus current, CustomerStage stage) {
 /// linear stepper).
 bool isCancelled(OrderStatus status) => status == OrderStatus.cancelled;
 
-/// Cancellation is offered ONLY while the order is still pending (UI policy).
+/// Whether the tracking screen offers cancellation — ONLY while pending.
 ///
-/// NB: this is intentionally stricter than [OrderStatus.allowedNextStatuses],
-/// which permits cancelling through `ready` — per the tracking spec, once an
-/// order is accepted the customer can no longer cancel from here.
-bool canCancelOrder(OrderStatus status) => status == OrderStatus.pending;
+/// This mirrors the domain rule rather than narrowing it: `cancelled` is
+/// reachable only from `pending` per [OrderStatus.allowedNextStatuses], so the
+/// link is enabled exactly when the write would actually be legal. The
+/// repository guard and the Firestore rules enforce the same constraint; this
+/// is the UI affordance, not the enforcement.
+bool canCancelOrder(OrderStatus status) =>
+    status.canTransitionTo(OrderStatus.cancelled);

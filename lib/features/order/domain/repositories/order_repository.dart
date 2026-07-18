@@ -24,4 +24,12 @@ abstract class OrderRepository {
   /// with a `ValidationFailure` (per [OrderStatus.canTransitionTo]) and stamps
   /// `updatedAt`.
   Future<Result<void>> updateOrderStatus(String orderId, OrderStatus newStatus);
+
+  /// Cancels an order (customer action from Order Tracking).
+  ///
+  /// Guarded by the SAME transition validation as [updateOrderStatus], so it
+  /// only succeeds while the order is still `pending`; anything further along
+  /// returns a `ValidationFailure` and writes nothing. Firestore rules enforce
+  /// the same rule server-side for the owner.
+  Future<Result<void>> cancelOrder(String orderId);
 }
