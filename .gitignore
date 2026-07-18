@@ -55,3 +55,9 @@ lib/firebase_options.dart
 ios/Runner/GoogleService-Info.plist
 macos/Runner/GoogleService-Info.plist
 graphify-out/
+
+# ─── Claude Code local settings ───────────────────────────────────────────────
+# Per-developer tool-permission grants that accumulate as you work. Purely local
+# machine state, so it must not ride along in feature commits. `settings.json`
+# (shared project config) is deliberately NOT ignored.
+.claude/settings.local.json
