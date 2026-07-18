@@ -92,14 +92,20 @@ not a subcollection.
 | `userId` | String | Firebase Auth UID of the owner. |
 | `items` | array\<map\> | Each map = an `OrderItem` (below). Frozen at checkout. |
 | `subtotal` | number (double) | Sum of line totals. |
-| `deliveryFee` | number (double) | |
 | `tax` | number (double) | |
-| `total` | number (double) | `subtotal + deliveryFee + tax`. |
+| `total` | number (double) | `subtotal + tax`. |
 | `status` | String | `OrderStatus.storageKey` (enum name). |
 | `payment` | String | `PaymentMethod.storageKey` (enum name). |
-| `deliveryAddress` | String | |
 | `createdAt` | Timestamp | `serverTimestamp()` on create. |
 | `updatedAt` | Timestamp | `serverTimestamp()` on every write. |
+
+> **Pickup-only.** This is a single-restaurant pickup app: there is no delivery
+> fee and no delivery address. Both were removed — the app no longer reads or
+> writes `deliveryFee` / `deliveryAddress`.
+>
+> **Legacy documents** may still carry those two keys. They are ignored on read.
+> Note that such an order's stored `total` still includes the old fee: pricing
+> is frozen at checkout, so a past order correctly shows what was charged.
 
 `items[]` element (`OrderItem`):
 
@@ -169,11 +175,11 @@ the same collection would be a duplicate write path.
 
 ## OrderStatus transitions
 
-Enum: `pending, accepted, preparing, ready, delivered, cancelled`.
+Enum: `pending, accepted, preparing, ready, completed, cancelled`.
 
-Happy path: `pending → accepted → preparing → ready → delivered`.
+Happy path: `pending → accepted → preparing → ready → completed`.
 **`cancelled` is reachable ONLY from `pending`** — once the kitchen accepts an
-order, food is committed and it can only move forward. `delivered` and
+order, food is committed and it can only move forward. `completed` and
 `cancelled` are terminal.
 
 | From | Allowed next |
@@ -181,12 +187,29 @@ order, food is committed and it can only move forward. `delivered` and
 | `pending` | `accepted`, `cancelled` |
 | `accepted` | `preparing` |
 | `preparing` | `ready` |
-| `ready` | `delivered` |
-| `delivered` | — (terminal) |
+| `ready` | `completed` |
+| `completed` | — (terminal) |
 | `cancelled` | — (terminal) |
 
 Helpers on the enum: `displayLabel`, `storageKey`, `allowedNextStatuses`,
 `canTransitionTo(next)`, `isTerminal`, `fromStorage(key)`.
+
+### Legacy status keys
+
+`completed` was previously stored as `delivered`. `fromStorage` maps the old
+string through `_legacyStorageKeys`, and `storageKey` always returns the CURRENT
+enum name, so a legacy document is never rewritten under the old key.
+
+This alias is load-bearing, not cosmetic. `fromStorage` falls back to `pending`
+for anything unrecognised, so without it every existing finished order would
+read back as **pending** — reappearing in the admin "New" tab with
+Accept/Reject, counting as an active order, and becoming customer-cancellable
+again. The repository's transition guard reads current status through the same
+function, so it would have permitted illegal writes on those documents too.
+
+Customer-facing wording differs deliberately: the tracking stepper's terminal
+node reads **"Picked Up"** (what the customer did) while admin surfaces read
+**"Completed"** (what the restaurant recorded). Same status, one storage key.
 
 `allowedNextStatuses` is the **single source of truth** for the cancel rule. It
 is enforced at three layers, none of which restates the rule:
