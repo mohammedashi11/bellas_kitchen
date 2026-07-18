@@ -68,10 +68,19 @@ Document id = auto / menu item id.
 | `category` | String | One of [storable categories](#categories); never `'All'`. |
 | `isBestSeller` | bool | default `false` |
 | `isAvailable` | bool | default `true`; query filters `== true` |
+| `addOns` | array\<map\> | Customization options. Each map = an `AddOn` (below). Missing/absent ⇒ `[]`. |
 | `createdAt` | Timestamp | **queried** (`orderBy` asc). Written via `serverTimestamp()`. Missing → epoch on read. |
 
 Query: `where(isAvailable == true).orderBy(createdAt asc)`, plus optional
 `where(category == X)` when a real category is selected.
+
+`addOns[]` element (`AddOn` — the LIVE, admin-managed definition):
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | String | Unique **within the item**. Cart line identity depends on it, so it must not change once customers have it. An entry read back without a usable `id` is **dropped**, never given a synthetic one. |
+| `name` | String | |
+| `price` | number (double) | Amount ADDED to the item's base price. `0` is valid and means a free preference (e.g. "No Onions"), which the UI renders as a switch rather than a priced checkbox — derived via `isFreePreference`, never stored. |
 
 ### `orders`
 
@@ -98,8 +107,18 @@ not a subcollection.
 |---|---|---|
 | `menuItemId` | String | Link back to the (possibly since-changed) menu item. |
 | `name` | String | Frozen snapshot. |
-| `price` | number (double) | Frozen unit price at checkout. |
+| `price` | number (double) | Frozen **base** unit price at checkout, excluding add-ons. |
 | `quantity` | number (int) | |
+| `addOns` | array\<map\> | Selected add-ons, frozen. Each map = an `OrderAddOn`: `name` + `price` **only** — deliberately no `id`, see below. Missing/absent ⇒ `[]`. |
+
+The charged unit price is `price + Σ addOns[].price` (`OrderItem.unitPrice`);
+`lineTotal` is that × `quantity`.
+
+> **Why `OrderAddOn` is not `AddOn`.** An order line already freezes a *copy* of
+> the menu item's name/price rather than referencing `MenuItem`; add-ons follow
+> the identical rule. Storing only `name` + `price` means an admin renaming
+> "Bacon" or changing its price can never rewrite what a past order shows or was
+> charged, and it keeps the order domain free of any menu-layer import.
 
 ### `users`
 
@@ -121,9 +140,11 @@ Document id = Firebase Auth `uid` (not duplicated in the body).
 
 | Entity | File | Fields |
 |---|---|---|
-| `MenuItem` | `features/menu/domain/entities/menu_item.dart` | `id, name, description, price:double, imageUrl, category, isBestSeller, isAvailable, createdAt:DateTime`. `==`/`hashCode` on `id`. Not const (holds `DateTime`). |
-| `CartItem` | `features/cart/domain/entities/cart_item.dart` | `item:MenuItem, quantity:int`; derived `lineTotal`. In-memory only (not persisted). |
-| `OrderItem` | `features/order/domain/entities/order_item.dart` | `menuItemId, name, price:double, quantity:int`; derived `lineTotal`. **Frozen snapshot** — no live `MenuItem` ref. |
+| `MenuItem` | `features/menu/domain/entities/menu_item.dart` | `id, name, description, price:double, imageUrl, category, isBestSeller, isAvailable, availableAddOns:List<AddOn>, createdAt:DateTime`. `==`/`hashCode` on `id`. Not const (holds `DateTime`). |
+| `AddOn` | `features/menu/domain/entities/add_on.dart` | `id, name, price:double`; derived `isFreePreference` (`price == 0`). `==`/`hashCode` on `id`. The live, admin-managed definition. |
+| `CartItem` | `features/cart/domain/entities/cart_item.dart` | `item:MenuItem, quantity:int, selectedAddOns:List<AddOn>`; derived `unitPrice`, `lineTotal`, `lineKey`. In-memory only (not persisted). |
+| `OrderItem` | `features/order/domain/entities/order_item.dart` | `menuItemId, name, price:double, quantity:int, addOns:List<OrderAddOn>`; derived `unitPrice`, `lineTotal`. **Frozen snapshot** — no live `MenuItem`/`AddOn` ref. |
+| `OrderAddOn` | `features/order/domain/entities/order_add_on.dart` | `name, price:double`. **Frozen snapshot** of a selected add-on; value equality on both fields. |
 | `Order` | `features/order/domain/entities/order.dart` | see `orders` schema; derived `itemCount`. |
 | `OrderStatus` | `features/order/domain/entities/order_status.dart` | enum (below). |
 | `PaymentMethod` | `features/order/domain/entities/payment_method.dart` | enum `card, cash`; `displayLabel`, `storageKey`, `fromStorage`. |
@@ -177,6 +198,47 @@ is enforced at three layers, none of which restates the rule:
 UI policy: `canCancelOrder(status)` (`order_stage.dart`) gates the tracking
 screen's Cancel link to `pending`, which now matches the domain rule exactly.
 Admin-side, REJECT is only offered on a `pending` order.
+
+---
+
+## Add-ons
+
+Implemented end-to-end: **admin definition → customer selection → cart line →
+frozen order snapshot.**
+
+1. **Admin** defines add-ons on a menu item in the add/edit form (repeatable
+   name + price rows). An existing add-on keeps the `id` it was saved with, so a
+   rename never splits it from carts referencing it. Write validation lives in
+   the same pure `validateMenuItemWrite` used for categories: non-blank name,
+   **non-negative** price (zero is valid), no duplicate ids within an item.
+2. **Customer** ticks add-ons on Item Detail. The "Add to Cart" price updates
+   live and equals `CartItem.unitPrice × quantity` exactly — the button cannot
+   show a figure the cart won't charge. Items with no add-ons omit the section.
+3. **Cart** carries the selection on the line and shows the add-on-inclusive
+   unit price. The existing subtotal / delivery / tax / total providers are
+   untouched — they simply consume the new `lineTotal`.
+4. **Order** freezes each selected add-on's name + price into `OrderAddOn` at
+   checkout. Order Tracking's summary itemises them; Order History reaches the
+   same view through its existing tap-through to the tracking route.
+
+### Cart line identity
+
+`CartItem.lineKey` decides whether an "add to cart" merges or starts a new line:
+
+| Case | Result |
+|---|---|
+| Same item, **same** add-on selection | Merges — quantity increments |
+| Same item, **different** add-on selection | **Separate line** |
+| Same item + add-ons, chosen in a different **order** | Merges (ids are sorted) |
+| Same item, with vs. without add-ons | Separate lines |
+
+```
+lineKey = addOns.isEmpty ? itemId : '$itemId#${sortedAddOnIds.join(",")}'
+```
+
+A line with **no** add-ons keys to the bare `itemId`. That is deliberate: the
+cart map is keyed by `lineKey`, and this keeps every caller that removes or
+decrements by menu item id behaving exactly as it did before add-ons existed.
 
 ---
 
