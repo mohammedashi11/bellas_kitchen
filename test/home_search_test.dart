@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:bellas_kitchen/core/constants/app_constants.dart';
+import 'package:bellas_kitchen/core/utils/result.dart';
 
 import 'package:bellas_kitchen/features/menu/domain/entities/menu_item.dart';
+import 'package:bellas_kitchen/features/menu/domain/repositories/menu_repository.dart';
 import 'package:bellas_kitchen/features/menu/presentation/providers/menu_providers.dart';
 import 'package:bellas_kitchen/features/menu/presentation/screens/home_screen.dart';
 
@@ -51,6 +53,52 @@ Widget _harness() {
     child: const MaterialApp(
       home: HomeScreen(),
     ),
+  );
+}
+
+/// Menu repository fake for the REAL-CHAIN harness below.
+class _FakeMenuRepo implements MenuRepository {
+  /// How many times the menu was actually fetched — a search must filter the
+  /// already-loaded list, never re-query the backend per keystroke.
+  int fetchCalls = 0;
+
+  @override
+  Future<Result<List<MenuItem>>> getMenuItems({String? category}) async {
+    fetchCalls++;
+    final all = _testItems();
+    final filtered = category == null || category == AppConstants.categoryAll
+        ? all
+        : all.where((i) => i.category == category).toList();
+    return Success(filtered);
+  }
+
+  @override
+  Future<Result<MenuItem?>> getMenuItemById(String id) async => Success(null);
+  @override
+  Stream<Result<List<MenuItem>>> watchAllMenuItems() =>
+      Stream<Result<List<MenuItem>>>.empty();
+  @override
+  Future<Result<MenuItem>> addMenuItem(MenuItem item) async => Success(item);
+  @override
+  Future<Result<void>> updateMenuItem(MenuItem item) async =>
+      const Success(null);
+  @override
+  Future<Result<void>> deleteMenuItem(String id) async => const Success(null);
+  @override
+  Future<Result<void>> setAvailability(String id, bool isAvailable) async =>
+      const Success(null);
+}
+
+/// Harness that overrides only the REPOSITORY, so the real
+/// `menuItemsProvider → GetMenuItems → filteredMenuItemsProvider` chain runs.
+///
+/// The `_harness()` above stubs `menuItemsProvider` itself, which means it
+/// never exercises that chain — a break anywhere inside it would leave those
+/// tests passing while the app failed on device. This closes that gap.
+Widget _realChainHarness(_FakeMenuRepo repo) {
+  return ProviderScope(
+    overrides: [menuRepositoryProvider.overrideWithValue(repo)],
+    child: const MaterialApp(home: HomeScreen()),
   );
 }
 
@@ -122,5 +170,81 @@ void main() {
       await tester.pump();
       expect(find.text('Classic Burger'), findsOneWidget);
     });
+  });
+
+  // ── Real provider chain ────────────────────────────────────────────────────
+  //
+  // Everything above stubs `menuItemsProvider`. These drive the same UI through
+  // the REAL menuItemsProvider + GetMenuItems, overriding only the repository,
+  // so a break inside that chain is caught here instead of on a device.
+  group('HomeScreen Search — real provider chain', () {
+    testWidgets('typing filters the list through the real chain',
+        (tester) async {
+      useTallViewport(tester);
+      final repo = _FakeMenuRepo();
+      await tester.pumpWidget(_realChainHarness(repo));
+      await tester.pumpAndSettle();
+
+      // Unfiltered baseline.
+      expect(find.text('Classic Burger'), findsOneWidget);
+      expect(find.text('Cheese Pizza'), findsOneWidget);
+      expect(find.text('Spicy Chicken Burger'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'burger');
+      await tester.pump();
+
+      expect(find.text('Classic Burger'), findsOneWidget);
+      expect(find.text('Spicy Chicken Burger'), findsOneWidget);
+      expect(find.text('Cheese Pizza'), findsNothing);
+    });
+
+    testWidgets('searching does NOT re-query the backend per keystroke',
+        (tester) async {
+      useTallViewport(tester);
+      final repo = _FakeMenuRepo();
+      await tester.pumpWidget(_realChainHarness(repo));
+      await tester.pumpAndSettle();
+      expect(repo.fetchCalls, 1);
+
+      for (final q in ['b', 'bu', 'bur', 'burg']) {
+        await tester.enterText(find.byType(TextField), q);
+        await tester.pump();
+      }
+
+      // Filtering is client-side over the already-loaded list.
+      expect(repo.fetchCalls, 1);
+      expect(find.text('Cheese Pizza'), findsNothing);
+    });
+
+    testWidgets('description match works through the real chain',
+        (tester) async {
+      useTallViewport(tester);
+      await tester.pumpWidget(_realChainHarness(_FakeMenuRepo()));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'cheesy');
+      await tester.pump();
+
+      expect(find.text('Cheese Pizza'), findsOneWidget);
+      expect(find.text('Classic Burger'), findsNothing);
+    });
+  });
+
+  // ── Single search entry point ──────────────────────────────────────────────
+  testWidgets('the search field is the ONLY search affordance', (tester) async {
+    useTallViewport(tester);
+    await tester.pumpWidget(_realChainHarness(_FakeMenuRepo()));
+    await tester.pumpAndSettle();
+
+    // The app bar used to carry a decorative magnifier with no tap handler,
+    // which read as the way to search while doing nothing. The only
+    // search_rounded icon left is the one INSIDE the search field's prefix.
+    final searchIcons = find.byIcon(Icons.search_rounded);
+    expect(searchIcons, findsOneWidget);
+    expect(
+      find.descendant(of: find.byType(TextField), matching: searchIcons),
+      findsOneWidget,
+      reason: 'the remaining magnifier must be the search field prefix',
+    );
   });
 }

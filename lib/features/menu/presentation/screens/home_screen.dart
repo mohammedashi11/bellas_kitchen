@@ -175,19 +175,10 @@ class _HomeAppBar extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          // Search icon button
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.borderColor, width: 0.5),
-            ),
-            child: const Icon(Icons.search_rounded,
-                color: AppColors.textSecondary, size: 22),
-          ),
+          // NB: no magnifier button here. One previously sat in this slot as a
+          // decorative leftover — it had no tap handler at all, so it read as
+          // the obvious way to search while doing nothing. The SearchBarWidget
+          // below is the single search entry point.
         ],
       ),
     );
