@@ -62,6 +62,23 @@ StageState stageStateFor(OrderStatus current, CustomerStage stage) {
 /// linear stepper).
 bool isCancelled(OrderStatus status) => status == OrderStatus.cancelled;
 
+/// Progress line shown under the stepper, derived ENTIRELY from the real order
+/// status.
+///
+/// This replaced a hardcoded "Courier is at the restaurant" caption sitting on
+/// a decorative map box. There is no courier and no delivery tracking, so that
+/// line asserted a fact the system could not know — it read as live tracking
+/// while being a constant. Every string here is a direct function of a status
+/// the backend actually sets.
+String trackingStatusMessage(OrderStatus status) => switch (status) {
+      OrderStatus.pending => "We've received your order.",
+      OrderStatus.accepted => 'The kitchen has confirmed your order.',
+      OrderStatus.preparing => 'Your order is being prepared.',
+      OrderStatus.ready => 'Your order is ready for pickup.',
+      OrderStatus.delivered => 'Picked up — enjoy your meal!',
+      OrderStatus.cancelled => 'This order was cancelled.',
+    };
+
 /// Whether the tracking screen offers cancellation — ONLY while pending.
 ///
 /// This mirrors the domain rule rather than narrowing it: `cancelled` is

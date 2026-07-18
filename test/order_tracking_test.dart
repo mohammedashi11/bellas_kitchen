@@ -138,6 +138,35 @@ void main() {
     });
   });
 
+  // ── Status message (replaced the fake courier map) ─────────────────────────
+  group('trackingStatusMessage', () {
+    test('every status maps to a distinct, non-empty message', () {
+      final messages =
+          OrderStatus.values.map(trackingStatusMessage).toList();
+      expect(messages.every((m) => m.trim().isNotEmpty), isTrue);
+      expect(messages.toSet().length, OrderStatus.values.length,
+          reason: 'each status should read differently');
+    });
+
+    test('messages reflect the real stage', () {
+      expect(trackingStatusMessage(OrderStatus.preparing),
+          contains('being prepared'));
+      expect(trackingStatusMessage(OrderStatus.ready),
+          contains('ready for pickup'));
+    });
+
+    test('no message invents courier or delivery state', () {
+      // The old UI hardcoded "Courier is at the restaurant" — a fact this
+      // system cannot know. Nothing here may re-introduce that.
+      for (final status in OrderStatus.values) {
+        final m = trackingStatusMessage(status).toLowerCase();
+        expect(m, isNot(contains('courier')));
+        expect(m, isNot(contains('driver')));
+        expect(m, isNot(contains('on its way')));
+      }
+    });
+  });
+
   test('isCancelled detects the cancelled status only', () {
     expect(isCancelled(OrderStatus.cancelled), isTrue);
     expect(isCancelled(OrderStatus.pending), isFalse);
@@ -200,6 +229,18 @@ void main() {
     expect(find.text('This order was cancelled'), findsOneWidget);
     // Linear stepper is absent → its stage labels don't render.
     expect(find.text('Preparing'), findsNothing);
+  });
+
+  testWidgets('status message renders from the real status; no fake courier',
+      (tester) async {
+    useTallViewport(tester);
+    await tester.pumpWidget(harness(_order(OrderStatus.preparing)));
+    await tester.pump();
+
+    expect(find.text('Your order is being prepared.'), findsOneWidget);
+    // The decorative map box and its hardcoded caption are gone for good.
+    expect(find.text('Courier is at the restaurant'), findsNothing);
+    expect(find.byIcon(Icons.map_rounded), findsNothing);
   });
 
   // ── Cancel flow ────────────────────────────────────────────────────────────

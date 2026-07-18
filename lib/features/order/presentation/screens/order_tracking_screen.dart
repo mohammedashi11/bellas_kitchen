@@ -155,11 +155,12 @@ class _Content extends StatelessWidget {
         const SizedBox(height: 28),
         if (cancelled)
           const _CancelledCard()
-        else
+        else ...[
           _StatusStepper(current: order.status),
-        const SizedBox(height: 28),
-        const _MapPlaceholder(),
-        const SizedBox(height: 20),
+          const SizedBox(height: 24),
+          _StatusMessage(status: order.status),
+        ],
+        const SizedBox(height: 24),
         _OrderSummaryCard(order: order),
         const SizedBox(height: 24),
         _ContactButton(),
@@ -380,46 +381,42 @@ class _CancelledCard extends StatelessWidget {
   }
 }
 
-// ─── Map placeholder ──────────────────────────────────────────────────────────
+// ─── Status message ───────────────────────────────────────────────────────────
 
-class _MapPlaceholder extends StatelessWidget {
-  const _MapPlaceholder();
+/// The current progress line, derived from the order's real status.
+///
+/// Replaces a decorative map box that carried a hardcoded "Courier is at the
+/// restaurant" caption. This is a pickup-only, single-restaurant app: there is
+/// no courier and no location feed, so that box implied live tracking the
+/// system could never provide. See [trackingStatusMessage].
+class _StatusMessage extends StatelessWidget {
+  final OrderStatus status;
+  const _StatusMessage({required this.status});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 200,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: AppColors.cardSurface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.borderColor, width: 0.5),
       ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
+      child: Row(
         children: [
-          const Center(
-            child: Icon(Icons.map_rounded, color: AppColors.surface, size: 96),
+          Container(
+            width: 10,
+            height: 10,
+            decoration: const BoxDecoration(
+              color: AppColors.openNowGreen,
+              shape: BoxShape.circle,
+            ),
           ),
-          Positioned(
-            left: 16,
-            bottom: 16,
-            right: 16,
-            child: Row(
-              children: [
-                Container(
-                  width: 12,
-                  height: 12,
-                  decoration: const BoxDecoration(
-                    color: AppColors.openNowGreen,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text('Courier is at the restaurant',
-                      style: AppTextStyles.itemName.copyWith(fontSize: 15)),
-                ),
-              ],
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              trackingStatusMessage(status),
+              style: AppTextStyles.itemName.copyWith(fontSize: 15),
             ),
           ),
         ],
