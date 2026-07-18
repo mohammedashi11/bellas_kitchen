@@ -70,6 +70,11 @@ class OrderModel extends Order {
                   name: i.name,
                   price: i.price,
                   quantity: i.quantity,
+                  // MUST be carried through. Omitting this silently dropped
+                  // every selected add-on at write time: the customer was
+                  // charged for them (they are inside subtotal/total) while the
+                  // stored document showed a bare line item.
+                  addOns: i.addOns,
                 ).toMap())
             .toList(),
         AppConstants.fieldSubtotal: subtotal,

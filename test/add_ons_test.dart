@@ -11,6 +11,7 @@ import 'package:bellas_kitchen/features/menu/domain/entities/add_on.dart';
 import 'package:bellas_kitchen/features/menu/domain/entities/menu_item.dart';
 import 'package:bellas_kitchen/features/menu/domain/menu_item_write_validator.dart';
 import 'package:bellas_kitchen/features/order/data/models/order_item_model.dart';
+import 'package:bellas_kitchen/features/order/data/models/order_model.dart';
 import 'package:bellas_kitchen/features/order/domain/entities/order.dart';
 import 'package:bellas_kitchen/features/order/domain/entities/order_add_on.dart';
 import 'package:bellas_kitchen/features/order/domain/entities/payment_method.dart';
@@ -321,6 +322,53 @@ void main() {
       final back = OrderItemModel.fromMap(map);
       expect(back.addOns.single.name, 'Extra Cheese');
       expect(back.lineTotal, closeTo(27.98, 1e-9));
+    });
+
+    test('OrderModel.toFirestore PERSISTS add-ons on the nested items', () {
+      // Regression: toFirestore rebuilt each OrderItemModel to serialise it and
+      // omitted `addOns`, so every selected add-on was dropped at write time —
+      // charged for in subtotal/total, absent from the stored document. The
+      // OrderItemModel.toMap tests above passed because they never went through
+      // the ORDER-level write path.
+      final order = OrderModel(
+        id: 'o1',
+        userId: 'u1',
+        items: const [
+          OrderItemModel(
+            menuItemId: 'burger',
+            name: 'Classic Burger',
+            price: 12.99,
+            quantity: 2,
+            addOns: [OrderAddOn(name: 'Extra Cheese', price: 1.00)],
+          ),
+        ],
+        subtotal: 27.98,
+        deliveryFee: 2.50,
+        tax: 2.52,
+        total: 33.00,
+        status: OrderStatus.pending,
+        payment: PaymentMethod.card,
+        deliveryAddress: '123 St',
+        createdAt: DateTime.utc(2026, 1, 1),
+        updatedAt: DateTime.utc(2026, 1, 1),
+      );
+
+      final written = order.toFirestore();
+      final writtenItem =
+          (written[AppConstants.fieldItems] as List).single as Map;
+      expect(writtenItem[AppConstants.fieldAddOns], isNotEmpty,
+          reason: 'add-ons must survive the order write path');
+
+      // And they survive a full round trip back into the domain.
+      final back = OrderModel.fromMap('o1', {
+        ...written,
+        // serverTimestamp() sentinels don't read back; irrelevant here.
+        AppConstants.fieldCreatedAt: null,
+        AppConstants.fieldUpdatedAt: null,
+      });
+      expect(back.items.single.addOns.single.name, 'Extra Cheese');
+      expect(back.items.single.addOns.single.price, closeTo(1.00, 1e-9));
+      expect(back.items.single.lineTotal, closeTo(27.98, 1e-9));
     });
 
     test('an order doc with NO addOns field reads as an empty list', () {
