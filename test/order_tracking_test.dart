@@ -62,7 +62,6 @@ Order _order(OrderStatus status) => Order(
             menuItemId: '1', name: 'Burger', price: 12.99, quantity: 2),
       ],
       subtotal: 25.98,
-      deliveryFee: 2.50,
       tax: 2.34,
       total: 30.82,
       status: status,

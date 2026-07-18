@@ -26,7 +26,6 @@ Order _order({
       userId: 'u1',
       items: const [],
       subtotal: total,
-      deliveryFee: 0,
       tax: 0,
       total: total,
       status: status,

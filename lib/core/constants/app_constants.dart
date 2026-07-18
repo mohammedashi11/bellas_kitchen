@@ -32,7 +32,6 @@ abstract final class AppConstants {
   static const String fieldMenuItemId = 'menuItemId';
   static const String fieldQuantity = 'quantity';
   static const String fieldSubtotal = 'subtotal';
-  static const String fieldDeliveryFee = 'deliveryFee';
   static const String fieldTax = 'tax';
   static const String fieldTotal = 'total';
   static const String fieldStatus = 'status';
@@ -106,8 +105,7 @@ abstract final class AppConstants {
   // Country dial code used by the phone-entry screen (single-country for now).
   static const String defaultDialCode = '+1';
 
-  // Order pricing (demo values)
-  static const double deliveryFee = 2.50; // flat delivery fee
+  // Order pricing (demo values). Pickup-only: there is no delivery fee.
   static const double taxRate = 0.09; // 9% sales tax
 
   // Feature gates

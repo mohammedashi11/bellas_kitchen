@@ -165,7 +165,7 @@ void main() {
       expect(orderRepo.placedOrder!.items[0].price, 10.00);
     });
 
-    test('total = subtotal + deliveryFee + tax', () async {
+    test('total = subtotal + tax (pickup-only: no delivery fee)', () async {
       final orderRepo = FakeOrderRepository();
       await PlaceOrderUseCase(orderRepo, FakeAuthRepository())(
         cartItems: [
@@ -180,14 +180,10 @@ void main() {
       final order = orderRepo.placedOrder!;
       const subtotal = 12.99 + 15.50 * 2; // 43.99
       expect(order.subtotal, closeTo(subtotal, 1e-9));
-      expect(order.deliveryFee, AppConstants.deliveryFee);
       expect(order.tax, closeTo(subtotal * AppConstants.taxRate, 1e-9));
       expect(
         order.total,
-        closeTo(
-          subtotal + AppConstants.deliveryFee + subtotal * AppConstants.taxRate,
-          1e-9,
-        ),
+        closeTo(subtotal + subtotal * AppConstants.taxRate, 1e-9),
       );
     });
 

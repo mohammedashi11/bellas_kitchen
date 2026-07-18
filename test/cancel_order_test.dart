@@ -24,7 +24,6 @@ void main() {
         {'menuItemId': '1', 'name': 'Burger', 'price': 12.99, 'quantity': 2},
       ],
       AppConstants.fieldSubtotal: 25.98,
-      AppConstants.fieldDeliveryFee: 2.50,
       AppConstants.fieldTax: 2.34,
       AppConstants.fieldTotal: 30.82,
       AppConstants.fieldStatus: status.storageKey,

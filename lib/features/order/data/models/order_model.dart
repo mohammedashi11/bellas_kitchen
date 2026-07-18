@@ -19,7 +19,6 @@ class OrderModel extends Order {
     required super.userId,
     required super.items,
     required super.subtotal,
-    required super.deliveryFee,
     required super.tax,
     required super.total,
     required super.status,
@@ -43,8 +42,6 @@ class OrderModel extends Order {
               Map<String, dynamic>.from(e as Map)))
           .toList(),
       subtotal: (data[AppConstants.fieldSubtotal] as num?)?.toDouble() ?? 0.0,
-      deliveryFee:
-          (data[AppConstants.fieldDeliveryFee] as num?)?.toDouble() ?? 0.0,
       tax: (data[AppConstants.fieldTax] as num?)?.toDouble() ?? 0.0,
       total: (data[AppConstants.fieldTotal] as num?)?.toDouble() ?? 0.0,
       status: OrderStatus.fromStorage(data[AppConstants.fieldStatus] as String?),
@@ -78,7 +75,6 @@ class OrderModel extends Order {
                 ).toMap())
             .toList(),
         AppConstants.fieldSubtotal: subtotal,
-        AppConstants.fieldDeliveryFee: deliveryFee,
         AppConstants.fieldTax: tax,
         AppConstants.fieldTotal: total,
         AppConstants.fieldStatus: status.storageKey,

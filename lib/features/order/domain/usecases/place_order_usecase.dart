@@ -60,9 +60,9 @@ class PlaceOrderUseCase {
         .toList();
 
     final subtotal = items.fold<double>(0.0, (sum, i) => sum + i.lineTotal);
-    final deliveryFee = AppConstants.deliveryFee;
     final tax = subtotal * AppConstants.taxRate;
-    final total = subtotal + deliveryFee + tax;
+    // Pickup-only: no delivery fee in the total.
+    final total = subtotal + tax;
 
     final now = DateTime.now();
     final order = Order(
@@ -70,7 +70,6 @@ class PlaceOrderUseCase {
       userId: userId,
       items: items,
       subtotal: subtotal,
-      deliveryFee: deliveryFee,
       tax: tax,
       total: total,
       status: OrderStatus.pending,

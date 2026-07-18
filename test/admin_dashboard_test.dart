@@ -31,7 +31,6 @@ Order _order({
       userId: 'u',
       items: items,
       subtotal: total,
-      deliveryFee: 0,
       tax: 0,
       total: total,
       status: status,

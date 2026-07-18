@@ -46,7 +46,6 @@ class FirestoreOrderRepository implements OrderRepository {
         userId: order.userId,
         items: order.items,
         subtotal: order.subtotal,
-        deliveryFee: order.deliveryFee,
         tax: order.tax,
         total: order.total,
         status: order.status,

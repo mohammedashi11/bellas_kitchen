@@ -121,12 +121,11 @@ void main() {
           closeTo(expectedSubtotal, 1e-9));
       expect(container.read(cartTaxProvider),
           closeTo(expectedSubtotal * AppConstants.taxRate, 1e-9));
+      // Pickup-only: total is subtotal + tax, no delivery fee.
       expect(
         container.read(cartTotalProvider),
         closeTo(
-          expectedSubtotal +
-              AppConstants.deliveryFee +
-              expectedSubtotal * AppConstants.taxRate,
+          expectedSubtotal + expectedSubtotal * AppConstants.taxRate,
           1e-9,
         ),
       );
@@ -343,7 +342,6 @@ void main() {
           ),
         ],
         subtotal: 27.98,
-        deliveryFee: 2.50,
         tax: 2.52,
         total: 33.00,
         status: OrderStatus.pending,

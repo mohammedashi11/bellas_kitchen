@@ -83,20 +83,13 @@ final cartSubtotalProvider = Provider<double>((ref) {
   return ref.watch(cartProvider).values.fold(0.0, (sum, ci) => sum + ci.lineTotal);
 });
 
-/// Delivery fee — only applied when the cart is non-empty.
-final cartDeliveryFeeProvider = Provider<double>((ref) {
-  final hasItems = ref.watch(cartItemCountProvider) > 0;
-  return hasItems ? AppConstants.deliveryFee : 0.0;
-});
-
 final cartTaxProvider = Provider<double>((ref) {
   return ref.watch(cartSubtotalProvider) * AppConstants.taxRate;
 });
 
+/// Pickup-only: no delivery fee, so the total is just subtotal + tax.
 final cartTotalProvider = Provider<double>((ref) {
-  return ref.watch(cartSubtotalProvider) +
-      ref.watch(cartDeliveryFeeProvider) +
-      ref.watch(cartTaxProvider);
+  return ref.watch(cartSubtotalProvider) + ref.watch(cartTaxProvider);
 });
 
 // ---------------------------------------------------------------------------

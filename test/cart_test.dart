@@ -39,22 +39,19 @@ void main() {
     test('1. quantity changes update subtotal/tax/total in real time', () {
       final cart = container.read(cartProvider.notifier);
 
-      // Empty cart: no fee, no total.
+      // Empty cart: no total.
       expect(container.read(cartSubtotalProvider), 0.0);
-      expect(container.read(cartDeliveryFeeProvider), 0.0);
       expect(container.read(cartTotalProvider), 0.0);
 
-      // Add one burger (12.99).
+      // Add one burger (12.99). Pickup-only: total = subtotal + tax.
       cart.addItem(_burger);
       expect(container.read(cartItemCountProvider), 1);
       expect(container.read(cartSubtotalProvider), closeTo(12.99, 1e-9));
-      expect(container.read(cartDeliveryFeeProvider), AppConstants.deliveryFee);
       expect(container.read(cartTaxProvider),
           closeTo(12.99 * AppConstants.taxRate, 1e-9));
       expect(
         container.read(cartTotalProvider),
-        closeTo(12.99 + AppConstants.deliveryFee + 12.99 * AppConstants.taxRate,
-            1e-9),
+        closeTo(12.99 + 12.99 * AppConstants.taxRate, 1e-9),
       );
 
       // Increment burger to qty 2 — subtotal must track live.
@@ -83,7 +80,6 @@ void main() {
       // Removing the last item returns everything to the empty state.
       cart.removeItem(_pizza.id);
       expect(container.read(cartItemCountProvider), 0);
-      expect(container.read(cartDeliveryFeeProvider), 0.0);
       expect(container.read(cartTotalProvider), 0.0);
     });
 

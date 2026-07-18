@@ -517,7 +517,6 @@ class _OrderSummaryBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final subtotal = ref.watch(cartSubtotalProvider);
-    final deliveryFee = ref.watch(cartDeliveryFeeProvider);
     final tax = ref.watch(cartTaxProvider);
     final total = ref.watch(cartTotalProvider);
 
@@ -540,8 +539,6 @@ class _OrderSummaryBar extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             _SummaryRow(label: 'Subtotal', value: subtotal),
-            const SizedBox(height: 8),
-            _SummaryRow(label: 'Delivery Fee', value: deliveryFee),
             const SizedBox(height: 8),
             _SummaryRow(label: 'Tax', value: tax),
             const Padding(
