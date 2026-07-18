@@ -312,6 +312,55 @@ void main() {
       expect(find.text('This order was cancelled'), findsOneWidget);
     });
 
+    testWidgets('HAPPY PATH: a pending order cancels end to end',
+        (tester) async {
+      // One readable pass over the whole enabled-cancel path: the affordance
+      // is actually live on a pending order, the dialog offers both choices,
+      // confirming writes exactly once, and the cancelled state arrives from
+      // the stream rather than from local widget state.
+      useTallViewport(tester);
+      final controller = StreamController<Result<Order>>();
+      addTearDown(controller.close);
+      final repo = _FakeOrderRepo(orderStream: controller);
+
+      await tester.pumpWidget(harness(_order(OrderStatus.pending), repo: repo));
+      controller.add(Success(_order(OrderStatus.pending)));
+      await tester.pumpAndSettle();
+
+      // 1. The link is ENABLED — full opacity, not the 0.5 inert styling.
+      final opacity = tester.widget<Opacity>(
+        find
+            .ancestor(
+              of: find.text('Cancel Order'),
+              matching: find.byType(Opacity),
+            )
+            .first,
+      );
+      expect(opacity.opacity, 1.0,
+          reason: 'cancel must be live while the order is pending');
+
+      // 2. Tapping opens the confirmation with both choices, and writes nothing.
+      await tapCancelLink(tester);
+      expect(find.text('Cancel this order?'), findsOneWidget);
+      expect(find.text('Keep Order'), findsOneWidget);
+      expect(repo.cancelledIds, isEmpty);
+
+      // 3. Confirming fires cancelOrder exactly once, with the route order id.
+      await tester.tap(find.text('Cancel Order').last);
+      await tester.pumpAndSettle();
+      expect(repo.cancelledIds, ['abc123def']);
+      expect(find.text('Cancel this order?'), findsNothing);
+
+      // 4. The cancelled view arrives only once the stream says so.
+      controller.add(Success(_order(OrderStatus.cancelled)));
+      await tester.pumpAndSettle();
+      expect(find.text('Order Cancelled'), findsOneWidget);
+      expect(find.text('This order was cancelled'), findsOneWidget);
+
+      // 5. And cancelling again is no longer offered.
+      expect(canCancelOrder(OrderStatus.cancelled), isFalse);
+    });
+
     testWidgets('a typed failure surfaces its message', (tester) async {
       useTallViewport(tester);
       final repo = _FakeOrderRepo(
