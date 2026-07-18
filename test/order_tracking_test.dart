@@ -77,7 +77,7 @@ void main() {
       CustomerStage.orderPlaced,
       CustomerStage.preparing,
       CustomerStage.ready,
-      CustomerStage.delivered,
+      CustomerStage.completed,
     ]);
   });
 
@@ -86,7 +86,7 @@ void main() {
     expect(customerStageOf(OrderStatus.accepted), CustomerStage.orderPlaced);
     expect(customerStageOf(OrderStatus.preparing), CustomerStage.preparing);
     expect(customerStageOf(OrderStatus.ready), CustomerStage.ready);
-    expect(customerStageOf(OrderStatus.delivered), CustomerStage.delivered);
+    expect(customerStageOf(OrderStatus.completed), CustomerStage.completed);
   });
 
   group('stageStateFor (customer grouping)', () {
@@ -95,7 +95,7 @@ void main() {
           StageState.current);
       expect(stageStateFor(OrderStatus.pending, CustomerStage.preparing),
           StageState.upcoming);
-      expect(stageStateFor(OrderStatus.pending, CustomerStage.delivered),
+      expect(stageStateFor(OrderStatus.pending, CustomerStage.completed),
           StageState.upcoming);
     });
 
@@ -114,7 +114,7 @@ void main() {
           StageState.current);
       expect(stageStateFor(OrderStatus.preparing, CustomerStage.ready),
           StageState.upcoming);
-      expect(stageStateFor(OrderStatus.preparing, CustomerStage.delivered),
+      expect(stageStateFor(OrderStatus.preparing, CustomerStage.completed),
           StageState.upcoming);
     });
 
@@ -125,13 +125,13 @@ void main() {
           StageState.complete);
       expect(stageStateFor(OrderStatus.ready, CustomerStage.ready),
           StageState.current);
-      expect(stageStateFor(OrderStatus.ready, CustomerStage.delivered),
+      expect(stageStateFor(OrderStatus.ready, CustomerStage.completed),
           StageState.upcoming);
     });
 
     test('delivered → all four nodes complete', () {
       for (final stage in customerStages) {
-        expect(stageStateFor(OrderStatus.delivered, stage), StageState.complete);
+        expect(stageStateFor(OrderStatus.completed, stage), StageState.complete);
       }
     });
   });
@@ -168,7 +168,7 @@ void main() {
   test('isCancelled detects the cancelled status only', () {
     expect(isCancelled(OrderStatus.cancelled), isTrue);
     expect(isCancelled(OrderStatus.pending), isFalse);
-    expect(isCancelled(OrderStatus.delivered), isFalse);
+    expect(isCancelled(OrderStatus.completed), isFalse);
   });
 
   group('canCancelOrder', () {
@@ -178,7 +178,7 @@ void main() {
         OrderStatus.accepted,
         OrderStatus.preparing,
         OrderStatus.ready,
-        OrderStatus.delivered,
+        OrderStatus.completed,
         OrderStatus.cancelled,
       ]) {
         expect(canCancelOrder(s), isFalse);

@@ -341,7 +341,7 @@ class _OrderCard extends StatelessWidget {
       );
     }
 
-    // Terminal (delivered/cancelled): no actions, just a status label.
+    // Terminal (completed/cancelled): no actions, just a status label.
     if (next == null && order.status.isTerminal) {
       return Align(
         alignment: Alignment.centerLeft,

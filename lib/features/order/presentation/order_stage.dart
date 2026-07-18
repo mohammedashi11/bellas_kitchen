@@ -14,16 +14,16 @@ enum CustomerStage {
   orderPlaced,
   preparing,
   ready,
-  delivered;
+  completed;
 
   String get label => switch (this) {
         CustomerStage.orderPlaced => 'Order Placed',
         CustomerStage.preparing => 'Preparing',
         CustomerStage.ready => 'Ready',
-        // "Picked Up", not "Delivered": pickup-only app. The underlying
-        // OrderStatus.delivered enum/storage key is unchanged — this is the
-        // customer-facing label only.
-        CustomerStage.delivered => 'Picked Up',
+        // Customer-facing wording for the terminal-success stage. The admin
+        // side calls the same status "Completed"; the customer sees the action
+        // they actually took.
+        CustomerStage.completed => 'Picked Up',
       };
 }
 
@@ -41,20 +41,20 @@ CustomerStage customerStageOf(OrderStatus status) => switch (status) {
       OrderStatus.accepted => CustomerStage.orderPlaced,
       OrderStatus.preparing => CustomerStage.preparing,
       OrderStatus.ready => CustomerStage.ready,
-      OrderStatus.delivered => CustomerStage.delivered,
+      OrderStatus.completed => CustomerStage.completed,
       OrderStatus.cancelled => CustomerStage.orderPlaced,
     };
 
 /// How the customer [stage] renders given the order's [current] status:
-/// - `complete`  — already passed (and the whole track once `delivered`),
+/// - `complete`  — already passed (and the whole track once `completed`),
 /// - `current`   — the active stage,
 /// - `upcoming`  — not yet reached.
 ///
 /// Not meaningful for a cancelled order — the UI shows a distinct cancelled
 /// state instead (see [isCancelled]).
 StageState stageStateFor(OrderStatus current, CustomerStage stage) {
-  // Delivered is terminal-success: the entire track reads as complete.
-  if (current == OrderStatus.delivered) return StageState.complete;
+  // Completed is terminal-success: the entire track reads as complete.
+  if (current == OrderStatus.completed) return StageState.complete;
   final currentStage = customerStageOf(current);
   if (currentStage.index > stage.index) return StageState.complete;
   if (currentStage.index == stage.index) return StageState.current;
@@ -78,7 +78,7 @@ String trackingStatusMessage(OrderStatus status) => switch (status) {
       OrderStatus.accepted => 'The kitchen has confirmed your order.',
       OrderStatus.preparing => 'Your order is being prepared.',
       OrderStatus.ready => 'Your order is ready for pickup.',
-      OrderStatus.delivered => 'Picked up — enjoy your meal!',
+      OrderStatus.completed => 'Picked up — enjoy your meal!',
       OrderStatus.cancelled => 'This order was cancelled.',
     };
 

@@ -18,7 +18,7 @@ import 'package:bellas_kitchen/features/user/domain/entities/app_user.dart';
 
 Order _order({
   String id = 'abcd9021',
-  OrderStatus status = OrderStatus.delivered,
+  OrderStatus status = OrderStatus.completed,
   double total = 53.18,
 }) =>
     Order(

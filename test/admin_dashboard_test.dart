@@ -99,7 +99,7 @@ void main() {
         _order(
             id: 'a',
             createdAt: _today,
-            status: OrderStatus.delivered,
+            status: OrderStatus.completed,
             total: 10),
         _order(
             id: 'b', createdAt: _today, status: OrderStatus.pending, total: 20),
@@ -111,7 +111,7 @@ void main() {
         _order(
             id: 'd',
             createdAt: _yesterday,
-            status: OrderStatus.delivered,
+            status: OrderStatus.completed,
             total: 99), // not today
       ], now: _now);
       expect(s.todaysRevenue, closeTo(30, 1e-9)); // 10 + 20

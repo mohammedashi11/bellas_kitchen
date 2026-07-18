@@ -221,7 +221,7 @@ class _StatusStepper extends StatelessWidget {
         CustomerStage.orderPlaced => Icons.receipt_long_rounded,
         CustomerStage.preparing => Icons.restaurant_rounded,
         CustomerStage.ready => Icons.delivery_dining_rounded,
-        CustomerStage.delivered => Icons.check_circle_rounded,
+        CustomerStage.completed => Icons.check_circle_rounded,
       };
 
   @override

@@ -360,7 +360,7 @@ class _StatusBadge extends StatelessWidget {
         OrderStatus.accepted => AdminColors.accent,
         OrderStatus.preparing => const Color(0xFFF97316),
         OrderStatus.ready => const Color(0xFF38BDF8),
-        OrderStatus.delivered => AdminColors.success,
+        OrderStatus.completed => AdminColors.success,
         OrderStatus.cancelled => AdminColors.danger,
       };
 

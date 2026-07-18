@@ -131,7 +131,7 @@ class _StatusChip extends StatelessWidget {
   const _StatusChip({required this.status});
 
   Color _color() => switch (status) {
-        OrderStatus.delivered => AppColors.openNowGreen,
+        OrderStatus.completed => AppColors.openNowGreen,
         OrderStatus.cancelled => AppColors.textHint,
         _ => AppColors.accent,
       };

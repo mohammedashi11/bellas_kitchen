@@ -17,21 +17,21 @@ void main() {
           isNull);
       expect(validateTransition(OrderStatus.preparing, OrderStatus.ready),
           isNull);
-      expect(validateTransition(OrderStatus.ready, OrderStatus.delivered),
+      expect(validateTransition(OrderStatus.ready, OrderStatus.completed),
           isNull);
     });
 
     test('illegal transitions return a ValidationFailure', () {
       // Backwards.
-      expect(validateTransition(OrderStatus.delivered, OrderStatus.pending),
+      expect(validateTransition(OrderStatus.completed, OrderStatus.pending),
           isA<ValidationFailure>());
       // Skipping ahead.
-      expect(validateTransition(OrderStatus.pending, OrderStatus.delivered),
+      expect(validateTransition(OrderStatus.pending, OrderStatus.completed),
           isA<ValidationFailure>());
       // From a terminal state.
       expect(validateTransition(OrderStatus.cancelled, OrderStatus.pending),
           isA<ValidationFailure>());
-      expect(validateTransition(OrderStatus.delivered, OrderStatus.ready),
+      expect(validateTransition(OrderStatus.completed, OrderStatus.ready),
           isA<ValidationFailure>());
     });
   });
@@ -42,11 +42,11 @@ void main() {
       expect(forwardStatus(OrderStatus.pending), OrderStatus.accepted);
       expect(forwardStatus(OrderStatus.accepted), OrderStatus.preparing);
       expect(forwardStatus(OrderStatus.preparing), OrderStatus.ready);
-      expect(forwardStatus(OrderStatus.ready), OrderStatus.delivered);
+      expect(forwardStatus(OrderStatus.ready), OrderStatus.completed);
     });
 
     test('terminal statuses have no forward status', () {
-      expect(forwardStatus(OrderStatus.delivered), isNull);
+      expect(forwardStatus(OrderStatus.completed), isNull);
       expect(forwardStatus(OrderStatus.cancelled), isNull);
     });
 
@@ -61,7 +61,9 @@ void main() {
     test('title-cases the enum name', () {
       expect(markAsLabel(OrderStatus.preparing), 'Mark as Preparing');
       expect(markAsLabel(OrderStatus.ready), 'Mark as Ready');
-      expect(markAsLabel(OrderStatus.delivered), 'Mark as Delivered');
+      // Derived from the enum NAME, so the rename flows through to the admin
+      // advance button automatically.
+      expect(markAsLabel(OrderStatus.completed), 'Mark as Completed');
       expect(markAsLabel(OrderStatus.accepted), 'Mark as Accepted');
     });
   });
@@ -74,13 +76,13 @@ void main() {
           {OrderStatus.accepted, OrderStatus.preparing});
       expect(AdminOrderTab.ready.statuses, {OrderStatus.ready});
       expect(AdminOrderTab.completed.statuses,
-          {OrderStatus.delivered, OrderStatus.cancelled});
+          {OrderStatus.completed, OrderStatus.cancelled});
     });
 
     test('orderInTab matches only the tab that owns the status', () {
       expect(orderInTab(OrderStatus.pending, AdminOrderTab.incoming), isTrue);
       expect(orderInTab(OrderStatus.preparing, AdminOrderTab.preparing), isTrue);
-      expect(orderInTab(OrderStatus.delivered, AdminOrderTab.completed), isTrue);
+      expect(orderInTab(OrderStatus.completed, AdminOrderTab.completed), isTrue);
       expect(orderInTab(OrderStatus.pending, AdminOrderTab.completed), isFalse);
     });
 

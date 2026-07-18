@@ -7,6 +7,7 @@ import 'package:bellas_kitchen/core/utils/result.dart';
 import 'package:bellas_kitchen/features/order/data/repositories/firestore_order_repository.dart';
 import 'package:bellas_kitchen/features/order/domain/entities/order_status.dart';
 import 'package:bellas_kitchen/features/order/domain/order_transition.dart';
+import 'package:bellas_kitchen/features/order/presentation/order_stage.dart';
 
 /// Cancellation: the transition RULE (pure domain) and the repository GUARD
 /// that enforces it against Firestore.
@@ -67,8 +68,34 @@ void main() {
           isNull);
       expect(
           validateTransition(OrderStatus.preparing, OrderStatus.ready), isNull);
-      expect(validateTransition(OrderStatus.ready, OrderStatus.delivered),
+      expect(validateTransition(OrderStatus.ready, OrderStatus.completed),
           isNull);
+    });
+
+    test('legacy "delivered" docs read back as completed, not pending', () {
+      // The terminal status was renamed delivered -> completed. Existing
+      // documents still hold 'delivered', and fromStorage falls back to
+      // `pending` for anything unrecognised — so without the legacy alias a
+      // FINISHED order would come back as pending: it would reappear in the
+      // admin New tab offering Accept/Reject, and become cancellable again.
+      expect(OrderStatus.fromStorage('delivered'), OrderStatus.completed);
+      expect(OrderStatus.fromStorage('delivered').isTerminal, isTrue);
+      expect(canCancelOrder(OrderStatus.fromStorage('delivered')), isFalse);
+    });
+
+    test('current keys and unknown keys still behave', () {
+      for (final s in OrderStatus.values) {
+        expect(OrderStatus.fromStorage(s.storageKey), s);
+      }
+      // Genuinely unknown / missing still degrades to pending.
+      expect(OrderStatus.fromStorage('not_a_status'), OrderStatus.pending);
+      expect(OrderStatus.fromStorage(null), OrderStatus.pending);
+    });
+
+    test('completed is never written back under the old key', () {
+      // Reading a legacy doc must not resurrect the old string on the next
+      // write — storageKey always reflects the CURRENT enum name.
+      expect(OrderStatus.fromStorage('delivered').storageKey, 'completed');
     });
 
     test('cancelled stays terminal', () {
@@ -104,7 +131,7 @@ void main() {
     });
 
     test('ready and delivered orders are equally rejected', () async {
-      for (final status in const [OrderStatus.ready, OrderStatus.delivered]) {
+      for (final status in const [OrderStatus.ready, OrderStatus.completed]) {
         final firestore = await seedOrder(status);
         final repo = FirestoreOrderRepository(firestore: firestore);
 

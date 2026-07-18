@@ -7,7 +7,7 @@ export '../../order/presentation/order_display.dart' show orderNumber;
 /// Admin filter tabs and the [OrderStatus] group each maps to.
 ///
 /// Grouping (noted): New = `pending`; Preparing = `accepted` + `preparing`;
-/// Ready = `ready`; Completed = `delivered` + `cancelled`.
+/// Ready = `ready`; Completed = `completed` + `cancelled`.
 enum AdminOrderTab {
   incoming,
   preparing,
@@ -29,7 +29,7 @@ enum AdminOrderTab {
           },
         AdminOrderTab.ready => {OrderStatus.ready},
         AdminOrderTab.completed => {
-            OrderStatus.delivered,
+            OrderStatus.completed,
             OrderStatus.cancelled,
           },
       };
