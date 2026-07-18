@@ -213,7 +213,6 @@ void main() {
             selectedAddOns: selected,
           ),
         ],
-        deliveryAddress: '123 St',
         payment: PaymentMethod.cash,
         currentUser: null,
       );
@@ -346,7 +345,6 @@ void main() {
         total: 33.00,
         status: OrderStatus.pending,
         payment: PaymentMethod.card,
-        deliveryAddress: '123 St',
         createdAt: DateTime.utc(2026, 1, 1),
         updatedAt: DateTime.utc(2026, 1, 1),
       );

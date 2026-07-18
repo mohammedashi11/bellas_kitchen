@@ -36,7 +36,6 @@ abstract final class AppConstants {
   static const String fieldTotal = 'total';
   static const String fieldStatus = 'status';
   static const String fieldPayment = 'payment';
-  static const String fieldDeliveryAddress = 'deliveryAddress';
 
   // Firestore field names — users
   static const String fieldUid = 'uid';

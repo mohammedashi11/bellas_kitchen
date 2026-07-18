@@ -28,7 +28,6 @@ void main() {
       AppConstants.fieldTotal: 30.82,
       AppConstants.fieldStatus: status.storageKey,
       AppConstants.fieldPayment: 'card',
-      AppConstants.fieldDeliveryAddress: '123 St',
       AppConstants.fieldCreatedAt: DateTime.utc(2026, 1, 1),
       AppConstants.fieldUpdatedAt: DateTime.utc(2026, 1, 1),
     });

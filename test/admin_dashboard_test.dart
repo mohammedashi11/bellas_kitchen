@@ -35,7 +35,6 @@ Order _order({
       total: total,
       status: status,
       payment: PaymentMethod.card,
-      deliveryAddress: 'x',
       createdAt: createdAt,
       updatedAt: createdAt,
     );

@@ -23,7 +23,6 @@ class OrderModel extends Order {
     required super.total,
     required super.status,
     required super.payment,
-    required super.deliveryAddress,
     required super.createdAt,
     required super.updatedAt,
   });
@@ -47,8 +46,6 @@ class OrderModel extends Order {
       status: OrderStatus.fromStorage(data[AppConstants.fieldStatus] as String?),
       payment:
           PaymentMethod.fromStorage(data[AppConstants.fieldPayment] as String?),
-      deliveryAddress:
-          data[AppConstants.fieldDeliveryAddress] as String? ?? '',
       createdAt: _readTime(data[AppConstants.fieldCreatedAt]),
       updatedAt: _readTime(data[AppConstants.fieldUpdatedAt]),
     );
@@ -79,7 +76,6 @@ class OrderModel extends Order {
         AppConstants.fieldTotal: total,
         AppConstants.fieldStatus: status.storageKey,
         AppConstants.fieldPayment: payment.storageKey,
-        AppConstants.fieldDeliveryAddress: deliveryAddress,
         AppConstants.fieldCreatedAt: FieldValue.serverTimestamp(),
         AppConstants.fieldUpdatedAt: FieldValue.serverTimestamp(),
       };

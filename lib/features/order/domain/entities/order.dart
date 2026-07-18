@@ -17,7 +17,6 @@ class Order {
   final double total;
   final OrderStatus status;
   final PaymentMethod payment;
-  final String deliveryAddress;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -30,7 +29,6 @@ class Order {
     required this.total,
     required this.status,
     required this.payment,
-    required this.deliveryAddress,
     required this.createdAt,
     required this.updatedAt,
   });

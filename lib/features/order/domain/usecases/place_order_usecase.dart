@@ -21,7 +21,6 @@ class PlaceOrderUseCase {
 
   Future<Result<Order>> call({
     required List<CartItem> cartItems,
-    required String deliveryAddress,
     required PaymentMethod payment,
     required AppUser? currentUser,
   }) async {
@@ -74,7 +73,6 @@ class PlaceOrderUseCase {
       total: total,
       status: OrderStatus.pending,
       payment: payment,
-      deliveryAddress: deliveryAddress,
       createdAt: now,
       updatedAt: now,
     );

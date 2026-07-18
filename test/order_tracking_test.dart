@@ -66,7 +66,6 @@ Order _order(OrderStatus status) => Order(
       total: 30.82,
       status: status,
       payment: PaymentMethod.card,
-      deliveryAddress: '123 St',
       createdAt: DateTime.utc(2024, 1, 1),
       updatedAt: DateTime.utc(2024, 1, 1),
     );

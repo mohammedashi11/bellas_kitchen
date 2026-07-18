@@ -50,7 +50,6 @@ class FirestoreOrderRepository implements OrderRepository {
         total: order.total,
         status: order.status,
         payment: order.payment,
-        deliveryAddress: order.deliveryAddress,
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,
       );

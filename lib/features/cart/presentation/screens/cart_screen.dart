@@ -21,8 +21,6 @@ class CartScreen extends ConsumerStatefulWidget {
 }
 
 class _CartScreenState extends ConsumerState<CartScreen> {
-  final _addressController = TextEditingController();
-  String? _addressError;
   String? _placeError;
 
   @override
@@ -35,26 +33,13 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     );
   }
 
-  @override
-  void dispose() {
-    _addressController.dispose();
-    super.dispose();
-  }
-
+  /// Pickup-only: nothing to collect before ordering, so there is no
+  /// pre-flight validation left — the cart is non-empty (the bar only renders
+  /// with items) and payment always has a selection.
   void _placeOrder() {
-    final address = _addressController.text.trim();
-    if (address.isEmpty) {
-      setState(() => _addressError = 'Please enter a delivery address.');
-      return;
-    }
-    setState(() {
-      _addressError = null;
-      _placeError = null;
-    });
+    setState(() => _placeError = null);
     FocusScope.of(context).unfocus();
-    ref
-        .read(checkoutControllerProvider.notifier)
-        .placeOrder(deliveryAddress: address);
+    ref.read(checkoutControllerProvider.notifier).placeOrder();
   }
 
   @override
@@ -89,13 +74,6 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         _SectionHeader('ORDER SUMMARY'),
                         const SizedBox(height: 12),
                         ...items.map((ci) => _CartItemCard(cartItem: ci)),
-                        const SizedBox(height: 20),
-                        _SectionHeader('DELIVERY DETAILS'),
-                        const SizedBox(height: 12),
-                        _AddressField(
-                          controller: _addressController,
-                          errorText: _addressError,
-                        ),
                         const SizedBox(height: 20),
                         _SectionHeader('PAYMENT METHOD'),
                         const SizedBox(height: 12),
@@ -339,78 +317,6 @@ class _StepperButton extends StatelessWidget {
         height: 34,
         child: Icon(icon, color: AppColors.textPrimary, size: 18),
       ),
-    );
-  }
-}
-
-// ─── Editable delivery address ────────────────────────────────────────────────
-
-class _AddressField extends StatelessWidget {
-  final TextEditingController controller;
-  final String? errorText;
-  const _AddressField({required this.controller, this.errorText});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: AppColors.cardSurface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: errorText != null ? AppColors.accent : AppColors.borderColor,
-              width: errorText != null ? 1.2 : 0.5,
-            ),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.accent.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.location_on_rounded,
-                    color: AppColors.accent, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  minLines: 1,
-                  maxLines: 2,
-                  style: AppTextStyles.itemName,
-                  cursorColor: AppColors.accent,
-                  textInputAction: TextInputAction.done,
-                  decoration: InputDecoration(
-                    isCollapsed: true,
-                    border: InputBorder.none,
-                    hintText: 'Enter your delivery address',
-                    hintStyle: AppTextStyles.searchHint,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.edit_outlined,
-                  color: AppColors.accent, size: 20),
-            ],
-          ),
-        ),
-        if (errorText != null) ...[
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.only(left: 4),
-            child: Text(errorText!,
-                style: AppTextStyles.itemDescription
-                    .copyWith(color: AppColors.accent, fontSize: 12)),
-          ),
-        ],
-      ],
     );
   }
 }

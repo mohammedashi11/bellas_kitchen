@@ -39,7 +39,7 @@ class CheckoutController extends Notifier<CheckoutState> {
   @override
   CheckoutState build() => const CheckoutIdle();
 
-  Future<void> placeOrder({required String deliveryAddress}) async {
+  Future<void> placeOrder() async {
     state = const CheckoutPlacing();
 
     final items = ref.read(cartItemsProvider);
@@ -49,7 +49,6 @@ class CheckoutController extends Notifier<CheckoutState> {
 
     final result = await useCase(
       cartItems: items,
-      deliveryAddress: deliveryAddress,
       payment: payment,
       currentUser: currentUser,
     );

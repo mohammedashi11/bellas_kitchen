@@ -114,7 +114,6 @@ void main() {
       final authRepo = FakeAuthRepository();
       final result = await PlaceOrderUseCase(orderRepo, authRepo)(
         cartItems: const [],
-        deliveryAddress: '123 St',
         payment: PaymentMethod.cash,
         currentUser: null,
       );
@@ -131,7 +130,6 @@ void main() {
           _line('1', 'Burger', 12.99, 2),
           _line('2', 'Pizza', 15.50, 1),
         ],
-        deliveryAddress: '123 St',
         payment: PaymentMethod.card,
         currentUser: null,
       );
@@ -145,14 +143,12 @@ void main() {
       expect(order.items[0].lineTotal, closeTo(25.98, 1e-9));
       expect(order.status, OrderStatus.pending);
       expect(order.payment, PaymentMethod.card);
-      expect(order.deliveryAddress, '123 St');
     });
 
     test('snapshot price is frozen, independent of later menu prices', () async {
       final orderRepo = FakeOrderRepository();
       await PlaceOrderUseCase(orderRepo, FakeAuthRepository())(
         cartItems: [_line('1', 'Burger', 10.00, 1)],
-        deliveryAddress: 'x',
         payment: PaymentMethod.cash,
         currentUser: null,
       );
@@ -172,7 +168,6 @@ void main() {
           _line('1', 'B', 12.99, 1),
           _line('2', 'P', 15.50, 2),
         ],
-        deliveryAddress: 'x',
         payment: PaymentMethod.cash,
         currentUser: null,
       );
@@ -198,7 +193,6 @@ void main() {
       );
       await PlaceOrderUseCase(orderRepo, authRepo)(
         cartItems: [_line('1', 'B', 5, 1)],
-        deliveryAddress: 'x',
         payment: PaymentMethod.cash,
         currentUser: user,
       );
@@ -218,7 +212,6 @@ void main() {
       );
       await PlaceOrderUseCase(orderRepo, authRepo)(
         cartItems: [_line('1', 'B', 5, 1)],
-        deliveryAddress: 'x',
         payment: PaymentMethod.cash,
         currentUser: null,
       );
@@ -234,7 +227,6 @@ void main() {
       );
       final result = await PlaceOrderUseCase(orderRepo, authRepo)(
         cartItems: [_line('1', 'B', 5, 1)],
-        deliveryAddress: 'x',
         payment: PaymentMethod.cash,
         currentUser: null,
       );

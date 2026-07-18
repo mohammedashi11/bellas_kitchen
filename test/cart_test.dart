@@ -182,8 +182,8 @@ void main() {
     expect(find.text('Home count: 2'), findsOneWidget);
   });
 
-  // ── CartScreen: steppers/trash work; Place Order requires an address ───────
-  testWidgets('CartScreen: steppers/trash work; Place Order needs an address',
+  // ── CartScreen: steppers/trash work; checkout is pickup-only ───────────────
+  testWidgets('CartScreen: steppers/trash work; no address step (pickup)',
       (tester) async {
     final container = ProviderContainer();
     addTearDown(container.dispose);
@@ -202,6 +202,12 @@ void main() {
     expect(find.text('Margherita Pizza'), findsOneWidget);
     expect(find.text('Place Order'), findsOneWidget);
 
+    // Pickup-only: checkout collects no address, and charges no delivery fee.
+    expect(find.text('DELIVERY DETAILS'), findsNothing);
+    expect(find.text('Enter your delivery address'), findsNothing);
+    expect(find.text('Delivery Fee'), findsNothing);
+    expect(find.text('PAYMENT METHOD'), findsOneWidget);
+
     // Tap "+" on the burger row -> quantity provider updates live.
     await tester.tap(find.byIcon(Icons.add_rounded).first);
     await tester.pump();
@@ -213,10 +219,10 @@ void main() {
     expect(find.text('Margherita Pizza'), findsNothing);
     expect(container.read(cartProvider).containsKey(_pizza.id), isFalse);
 
-    // Place Order with an empty address -> inline validation, cart untouched.
+    // Place Order proceeds straight to checkout — there is no address gate to
+    // fail, so the old "Please enter a delivery address." block is gone.
     await tester.tap(find.text('Place Order'));
     await tester.pump();
-    expect(find.text('Please enter a delivery address.'), findsOneWidget);
-    expect(container.read(cartProvider).containsKey(_burger.id), isTrue);
+    expect(find.text('Please enter a delivery address.'), findsNothing);
   });
 }

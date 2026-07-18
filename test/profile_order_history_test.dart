@@ -30,7 +30,6 @@ Order _order({
       total: total,
       status: status,
       payment: PaymentMethod.card,
-      deliveryAddress: 'x',
       createdAt: DateTime.utc(2023, 10, 12),
       updatedAt: DateTime.utc(2023, 10, 12),
     );
