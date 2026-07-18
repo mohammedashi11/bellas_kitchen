@@ -20,7 +20,10 @@ enum CustomerStage {
         CustomerStage.orderPlaced => 'Order Placed',
         CustomerStage.preparing => 'Preparing',
         CustomerStage.ready => 'Ready',
-        CustomerStage.delivered => 'Delivered',
+        // "Picked Up", not "Delivered": pickup-only app. The underlying
+        // OrderStatus.delivered enum/storage key is unchanged — this is the
+        // customer-facing label only.
+        CustomerStage.delivered => 'Picked Up',
       };
 }
 

@@ -212,7 +212,7 @@ void main() {
     await tester.pumpWidget(harness(_order(OrderStatus.preparing)));
     await tester.pump();
 
-    expect(find.textContaining('Estimated Delivery'), findsOneWidget);
+    expect(find.textContaining('Ready for Pickup'), findsOneWidget);
     expect(find.text('Order Placed'), findsOneWidget); // grouped node
     expect(find.text('Preparing'), findsOneWidget); // current stepper node
     expect(find.text('Cancel Order'), findsOneWidget);
@@ -295,7 +295,7 @@ void main() {
       await tester.pumpWidget(harness(_order(OrderStatus.pending), repo: repo));
       controller.add(Success(_order(OrderStatus.pending)));
       await tester.pumpAndSettle();
-      expect(find.textContaining('Estimated Delivery'), findsOneWidget);
+      expect(find.textContaining('Ready for Pickup'), findsOneWidget);
 
       await tapCancelLink(tester);
       await tester.tap(find.text('Cancel Order').last);
@@ -303,7 +303,7 @@ void main() {
 
       // The screen still shows the ACTIVE order — it holds no local cancelled
       // state; only the stream can flip it.
-      expect(find.textContaining('Estimated Delivery'), findsOneWidget);
+      expect(find.textContaining('Ready for Pickup'), findsOneWidget);
 
       controller.add(Success(_order(OrderStatus.cancelled)));
       await tester.pumpAndSettle();

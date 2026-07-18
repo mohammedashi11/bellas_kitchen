@@ -28,7 +28,9 @@ class OrderTrackingScreen extends ConsumerWidget {
     this.initialOrder,
   });
 
-  // Estimated delivery window is static (no ETA field on Order yet).
+  // Static pickup-ready window (no ETA field on Order yet). Phrased as pickup,
+  // not delivery: this is a single-restaurant pickup app — the order card and
+  // OrderStatus.ready already say "Ready for Pickup".
   static const String _eta = '25-35 mins';
 
   @override
@@ -145,7 +147,7 @@ class _Content extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Text(
-          cancelled ? 'Order Cancelled' : 'Estimated Delivery: $eta',
+          cancelled ? 'Order Cancelled' : 'Ready for Pickup in $eta',
           style: AppTextStyles.appBarTitle.copyWith(fontSize: 26, height: 1.2),
         ),
         if (degraded) ...[
