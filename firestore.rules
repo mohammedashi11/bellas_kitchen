@@ -35,7 +35,7 @@ service cloud.firestore {
     //   - the ONLY new status is 'cancelled' (no sneaking it back to pending or
     //     forward to delivered),
     //   - status + updatedAt are the ONLY fields touched, so a "cancel" cannot
-    //     also rewrite items, total, userId or deliveryAddress.
+    //     also rewrite items, total or userId.
     function isOwnerCancellingPendingOrder() {
       return isSignedIn()
         && resource.data.userId == request.auth.uid
