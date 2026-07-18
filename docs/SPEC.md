@@ -152,8 +152,13 @@ Document id = Firebase Auth `uid` (not duplicated in the body).
 | `UserRole` | `features/user/domain/entities/user_role.dart` | enum `customer, admin`; `storageKey`, `fromStorage` (defensive: only `'admin'` ⇒ admin). |
 
 Data models: `MenuItemModel`, `OrderModel`, `OrderItemModel`, `AppUserModel`.
-No repositories exist yet for Order or User — those arrive with the Auth and
-Order features.
+
+Repositories are implemented for Menu (`FirestoreMenuRepository`), Order
+(`FirestoreOrderRepository`) and Auth (`FirebaseAuthRepository`). There is
+deliberately **no separate User repository**: `users/{uid}` documents are read
+and written through the Auth repository, which already owns the profile
+lifecycle (creation on first sign-in, role read-back) — a second repository over
+the same collection would be a duplicate write path.
 
 > **Naming caveat:** `cloud_firestore` exports its own `Order` (an asc/desc
 > enum). Any data-layer file that imports both `cloud_firestore` and our `Order`
