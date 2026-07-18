@@ -24,6 +24,25 @@ AppFailure? validateMenuItemWrite(MenuItem item) {
       '${AppConstants.storableCategories.join(', ')}.',
     );
   }
+
+  // Add-ons. A zero price is VALID (a free preference like "No Onions"); only a
+  // negative one is rejected, since it would silently discount the item.
+  final seenIds = <String>{};
+  for (final addOn in item.availableAddOns) {
+    if (addOn.name.trim().isEmpty) {
+      return const ValidationFailure('Add-on name cannot be empty.');
+    }
+    if (addOn.price < 0) {
+      return ValidationFailure(
+          'Add-on "${addOn.name}" cannot have a negative price.');
+    }
+    // Ids are cart line identity: two add-ons sharing an id would make distinct
+    // selections collapse into one cart line.
+    if (!seenIds.add(addOn.id)) {
+      return ValidationFailure(
+          'Duplicate add-on id "${addOn.id}" on this item.');
+    }
+  }
   return null;
 }
 

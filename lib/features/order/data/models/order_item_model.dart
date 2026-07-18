@@ -1,3 +1,4 @@
+import '../../domain/entities/order_add_on.dart';
 import '../../domain/entities/order_item.dart';
 import '../../../../core/constants/app_constants.dart';
 
@@ -10,7 +11,22 @@ class OrderItemModel extends OrderItem {
     required super.name,
     required super.price,
     required super.quantity,
+    super.addOns,
   });
+
+  /// Reads the frozen `addOns` array. Missing/malformed → empty, so orders
+  /// placed before add-ons existed keep reading cleanly. Only name + price are
+  /// stored: an order snapshot must not point at a live menu definition.
+  static List<OrderAddOn> _readAddOns(Object? raw) {
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((m) => OrderAddOn(
+              name: m[AppConstants.fieldName] as String? ?? '',
+              price: (m[AppConstants.fieldPrice] as num?)?.toDouble() ?? 0.0,
+            ))
+        .toList(growable: false);
+  }
 
   factory OrderItemModel.fromMap(Map<String, dynamic> data) {
     return OrderItemModel(
@@ -18,6 +34,7 @@ class OrderItemModel extends OrderItem {
       name: data[AppConstants.fieldName] as String? ?? '',
       price: (data[AppConstants.fieldPrice] as num?)?.toDouble() ?? 0.0,
       quantity: (data[AppConstants.fieldQuantity] as num?)?.toInt() ?? 0,
+      addOns: _readAddOns(data[AppConstants.fieldAddOns]),
     );
   }
 
@@ -26,5 +43,12 @@ class OrderItemModel extends OrderItem {
         AppConstants.fieldName: name,
         AppConstants.fieldPrice: price,
         AppConstants.fieldQuantity: quantity,
+        AppConstants.fieldAddOns: [
+          for (final a in addOns)
+            {
+              AppConstants.fieldName: a.name,
+              AppConstants.fieldPrice: a.price,
+            },
+        ],
       };
 }

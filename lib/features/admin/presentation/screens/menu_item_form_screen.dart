@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/result.dart';
+import '../../../menu/domain/entities/add_on.dart';
 import '../../../menu/domain/entities/menu_item.dart';
 import '../../../menu/domain/menu_item_write_validator.dart';
 import '../../../menu/presentation/providers/menu_providers.dart';
@@ -26,11 +27,34 @@ class MenuItemFormScreen extends ConsumerStatefulWidget {
   ConsumerState<MenuItemFormScreen> createState() => _MenuItemFormScreenState();
 }
 
+/// One editable add-on row in the form. Holds its own controllers plus the
+/// add-on's stable [id]: an EXISTING add-on keeps the id it was saved with (so
+/// renaming "Bacon" doesn't split it from carts/orders that reference it), and
+/// a newly added row gets a fresh one.
+class _AddOnRowState {
+  final String id;
+  final TextEditingController name;
+  final TextEditingController price;
+
+  _AddOnRowState({required this.id, String? name, double? price})
+      : name = TextEditingController(text: name ?? ''),
+        price = TextEditingController(
+            text: price == null ? '' : price.toStringAsFixed(2));
+
+  void dispose() {
+    name.dispose();
+    price.dispose();
+  }
+}
+
 class _MenuItemFormScreenState extends ConsumerState<MenuItemFormScreen> {
   late final TextEditingController _name;
   late final TextEditingController _description;
   late final TextEditingController _price;
   late final TextEditingController _imageUrl;
+
+  final List<_AddOnRowState> _addOns = [];
+  int _addOnSeq = 0;
 
   String? _category;
   bool _isBestSeller = false;
@@ -57,6 +81,9 @@ class _MenuItemFormScreenState extends ConsumerState<MenuItemFormScreen> {
         : null;
     _isBestSeller = e?.isBestSeller ?? false;
     _isAvailable = e?.isAvailable ?? true;
+    for (final a in e?.availableAddOns ?? const <AddOn>[]) {
+      _addOns.add(_AddOnRowState(id: a.id, name: a.name, price: a.price));
+    }
   }
 
   @override
@@ -65,8 +92,41 @@ class _MenuItemFormScreenState extends ConsumerState<MenuItemFormScreen> {
     _description.dispose();
     _price.dispose();
     _imageUrl.dispose();
+    for (final a in _addOns) {
+      a.dispose();
+    }
     super.dispose();
   }
+
+  void _addAddOnRow() {
+    setState(() {
+      // Unique within this item, which is all AddOn.id must guarantee. Prefixed
+      // and sequenced so it can't collide with an id already loaded above.
+      _addOns.add(_AddOnRowState(
+          id: 'addon-${DateTime.now().millisecondsSinceEpoch}-${_addOnSeq++}'));
+    });
+  }
+
+  void _removeAddOnRow(int index) {
+    setState(() {
+      _addOns.removeAt(index).dispose();
+    });
+  }
+
+  /// The form's add-on rows as domain objects. A completely blank row is
+  /// dropped rather than rejected, so an admin who taps "Add" and changes their
+  /// mind isn't blocked from saving. A row with a name but an unparseable price
+  /// becomes price 0 and is caught by the validator only if negative — matching
+  /// how the base price field treats a bad number separately.
+  List<AddOn> _collectAddOns() => [
+        for (final row in _addOns)
+          if (!(row.name.text.trim().isEmpty && row.price.text.trim().isEmpty))
+            AddOn(
+              id: row.id,
+              name: row.name.text.trim(),
+              price: double.tryParse(row.price.text.trim()) ?? 0,
+            ),
+      ];
 
   Future<void> _pickAndUpload() async {
     setState(() => _error = null);
@@ -100,6 +160,7 @@ class _MenuItemFormScreenState extends ConsumerState<MenuItemFormScreen> {
       category: _category ?? '',
       isBestSeller: _isBestSeller,
       isAvailable: _isAvailable,
+      availableAddOns: _collectAddOns(),
       createdAt: widget.existing?.createdAt ?? DateTime.now(),
     );
 
@@ -226,6 +287,42 @@ class _MenuItemFormScreenState extends ConsumerState<MenuItemFormScreen> {
               urlController: _imageUrl,
               uploading: _uploading,
               onPickFile: _uploading || _saving ? null : _pickAndUpload,
+            ),
+            const SizedBox(height: 18),
+            _Label('ADD-ONS'),
+            const SizedBox(height: 6),
+            Text(
+              'Optional extras a customer can pick. Price 0 makes it a free '
+              'preference (e.g. "No Onions").',
+              style: GoogleFonts.poppins(
+                  fontSize: 12, color: AdminColors.textHint),
+            ),
+            const SizedBox(height: 10),
+            for (var i = 0; i < _addOns.length; i++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _AddOnEditorRow(
+                  row: _addOns[i],
+                  onRemove: () => _removeAddOnRow(i),
+                ),
+              ),
+            SizedBox(
+              height: 42,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AdminColors.border),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: _saving ? null : _addAddOnRow,
+                icon: const Icon(Icons.add_rounded,
+                    color: AdminColors.accent, size: 18),
+                label: Text('Add add-on',
+                    style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AdminColors.accent)),
+              ),
             ),
             const SizedBox(height: 18),
             _ToggleRow(
@@ -488,6 +585,45 @@ class _ImagePickerSection extends StatelessWidget {
               style: GoogleFonts.poppins(
                   fontSize: 12, color: AdminColors.textHint)),
         ],
+      ],
+    );
+  }
+}
+
+/// One add-on row: name + price fields and a remove button.
+class _AddOnEditorRow extends StatelessWidget {
+  final _AddOnRowState row;
+  final VoidCallback onRemove;
+
+  const _AddOnEditorRow({required this.row, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          flex: 3,
+          child: _Field(controller: row.name, hint: 'e.g. Extra Cheese'),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          flex: 2,
+          child: _Field(
+            controller: row.price,
+            hint: '0.00',
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+            ],
+          ),
+        ),
+        IconButton(
+          onPressed: onRemove,
+          icon: const Icon(Icons.delete_outline_rounded,
+              color: AdminColors.danger, size: 22),
+          tooltip: 'Remove add-on',
+        ),
       ],
     );
   }

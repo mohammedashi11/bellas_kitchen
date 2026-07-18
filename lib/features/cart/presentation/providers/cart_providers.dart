@@ -1,43 +1,61 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/cart_item.dart';
+import '../../../menu/domain/entities/add_on.dart';
 import '../../../menu/domain/entities/menu_item.dart';
 import '../../../order/domain/entities/payment_method.dart';
 import '../../../../core/constants/app_constants.dart';
 
 // ---------------------------------------------------------------------------
-// Cart state — in-memory, keyed by menu item id.
+// Cart state — in-memory, keyed by CartItem.lineKey.
+//
+// The key is the LINE identity, not the menu item id: the same item with a
+// different add-on selection is a separate line, while an identical selection
+// merges into one. For a line with no add-ons the key IS the menu item id, so
+// callers that remove/decrement by item id behave exactly as before.
 // ---------------------------------------------------------------------------
 class CartNotifier extends Notifier<Map<String, CartItem>> {
   @override
   Map<String, CartItem> build() => {};
 
-  void addItem(MenuItem item) {
-    final existing = state[item.id];
+  /// Adds one unit of [item] with [selectedAddOns]. Merges into the existing
+  /// line when that same item+selection is already in the cart.
+  void addItem(MenuItem item, {List<AddOn> selectedAddOns = const []}) {
+    final key = CartItem.keyFor(item.id, selectedAddOns);
+    final existing = state[key];
     if (existing != null) {
       state = {
         ...state,
-        item.id: existing.copyWith(quantity: existing.quantity + 1),
+        key: existing.copyWith(quantity: existing.quantity + 1),
       };
-    } else {
-      state = {...state, item.id: CartItem(item: item, quantity: 1)};
-    }
-  }
-
-  void removeItem(String itemId) {
-    final newState = Map<String, CartItem>.from(state);
-    newState.remove(itemId);
-    state = newState;
-  }
-
-  void decrementItem(String itemId) {
-    final existing = state[itemId];
-    if (existing == null) return;
-    if (existing.quantity <= 1) {
-      removeItem(itemId);
     } else {
       state = {
         ...state,
-        itemId: existing.copyWith(quantity: existing.quantity - 1),
+        key: CartItem(
+          item: item,
+          quantity: 1,
+          selectedAddOns: selectedAddOns,
+        ),
+      };
+    }
+  }
+
+  /// Removes a whole line. [lineKey] is [CartItem.lineKey] — for an add-on-free
+  /// line that is simply the menu item id.
+  void removeItem(String lineKey) {
+    final newState = Map<String, CartItem>.from(state);
+    newState.remove(lineKey);
+    state = newState;
+  }
+
+  void decrementItem(String lineKey) {
+    final existing = state[lineKey];
+    if (existing == null) return;
+    if (existing.quantity <= 1) {
+      removeItem(lineKey);
+    } else {
+      state = {
+        ...state,
+        lineKey: existing.copyWith(quantity: existing.quantity - 1),
       };
     }
   }

@@ -176,6 +176,9 @@ class _CartItemCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final item = cartItem.item;
     final cart = ref.read(cartProvider.notifier);
+    // Edits target this LINE, not the menu item: the same item with a different
+    // add-on selection is a separate line and must not be affected.
+    final lineKey = cartItem.lineKey;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -224,7 +227,7 @@ class _CartItemCard extends ConsumerWidget {
                     ),
                     GestureDetector(
                       behavior: HitTestBehavior.opaque,
-                      onTap: () => cart.removeItem(item.id),
+                      onTap: () => cart.removeItem(lineKey),
                       child: const Icon(Icons.delete_outline_rounded,
                           color: AppColors.accent, size: 22),
                     ),
@@ -237,16 +240,40 @@ class _CartItemCard extends ConsumerWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
+                // Selected add-ons: what distinguishes this line from another
+                // line of the same item.
+                if (cartItem.selectedAddOns.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  for (final addOn in cartItem.selectedAddOns)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 2),
+                      child: Text(
+                        addOn.price == 0
+                            ? '+ ${addOn.name}'
+                            : '+ ${addOn.name} '
+                                '(\$${addOn.price.toStringAsFixed(2)})',
+                        style: AppTextStyles.itemDescription.copyWith(
+                          fontSize: 12,
+                          color: AppColors.accent,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('\$${item.price.toStringAsFixed(2)}',
+                    // Unit price INCLUDING add-ons, so the figure here times
+                    // the quantity always reconciles with the order total.
+                    Text('\$${cartItem.unitPrice.toStringAsFixed(2)}',
                         style: AppTextStyles.price),
                     _QuantityStepper(
                       quantity: cartItem.quantity,
-                      onDecrement: () => cart.decrementItem(item.id),
-                      onIncrement: () => cart.addItem(item),
+                      onDecrement: () => cart.decrementItem(lineKey),
+                      onIncrement: () => cart.addItem(item,
+                          selectedAddOns: cartItem.selectedAddOns),
                     ),
                   ],
                 ),

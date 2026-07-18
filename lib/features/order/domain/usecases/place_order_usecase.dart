@@ -5,6 +5,7 @@ import '../../../auth/domain/repositories/auth_repository.dart';
 import '../../../cart/domain/entities/cart_item.dart';
 import '../../../user/domain/entities/app_user.dart';
 import '../entities/order.dart';
+import '../entities/order_add_on.dart';
 import '../entities/order_item.dart';
 import '../entities/order_status.dart';
 import '../entities/payment_method.dart';
@@ -42,15 +43,19 @@ class PlaceOrderUseCase {
       userId = (anon as Success<AppUser>).data.uid;
     }
 
-    // FROZEN SNAPSHOTS: capture name/price/quantity at checkout time. The order
-    // must preserve exactly what was charged even if the menu item's price later
-    // changes (Master Spec) — hence copies, not live MenuItem references.
+    // FROZEN SNAPSHOTS: capture name/price/quantity — and every selected
+    // add-on's name/price — at checkout time. The order must preserve exactly
+    // what was charged even if the menu item or its add-ons later change
+    // (Master Spec) — hence copies, not live MenuItem/AddOn references.
     final items = cartItems
         .map((ci) => OrderItem(
               menuItemId: ci.item.id,
               name: ci.item.name,
               price: ci.item.price,
               quantity: ci.quantity,
+              addOns: ci.selectedAddOns
+                  .map((a) => OrderAddOn(name: a.name, price: a.price))
+                  .toList(),
             ))
         .toList();
 

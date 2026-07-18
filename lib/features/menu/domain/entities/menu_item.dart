@@ -1,3 +1,5 @@
+import 'add_on.dart';
+
 /// Pure Dart MenuItem entity — no Flutter/Firebase dependencies.
 class MenuItem {
   final String id;
@@ -8,6 +10,11 @@ class MenuItem {
   final String category;
   final bool isBestSeller;
   final bool isAvailable;
+
+  /// Customization options a customer may select for this item. Empty means the
+  /// item isn't customizable — the common case, and the default for menu
+  /// documents written before add-ons existed.
+  final List<AddOn> availableAddOns;
 
   /// When the item was created. Menu queries order by this field, so it is
   /// required. Note: no `const` constructor because [DateTime] is not a
@@ -24,6 +31,7 @@ class MenuItem {
     required this.createdAt,
     this.isBestSeller = false,
     this.isAvailable = true,
+    this.availableAddOns = const [],
   });
 
   @override

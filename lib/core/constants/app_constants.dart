@@ -21,6 +21,11 @@ abstract final class AppConstants {
   static const String fieldCreatedAt = 'createdAt';
   static const String fieldUpdatedAt = 'updatedAt';
 
+  /// Add-ons: an array of maps on a menu item (`{id, name, price}`) and, frozen
+  /// at checkout, on each order line item (`{name, price}` — no id, since an
+  /// order snapshot must not reference a live menu definition).
+  static const String fieldAddOns = 'addOns';
+
   // Firestore field names — orders
   static const String fieldUserId = 'userId';
   static const String fieldItems = 'items';

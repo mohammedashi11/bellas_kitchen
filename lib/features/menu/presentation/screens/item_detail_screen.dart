@@ -5,33 +5,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../cart/presentation/providers/cart_providers.dart';
+import '../../domain/entities/add_on.dart';
 import '../../domain/entities/menu_item.dart';
 import '../providers/menu_providers.dart';
 
-// ─── Add-on model + pricing (local, not persisted) ────────────────────────────
-
-/// A single customization option. Local UI concept only — see the add-on
-/// modeling note in the item detail feature; not persisted to the cart yet.
-class AddOn {
-  final String label;
-  final double priceDelta;
-
-  /// Toggle (Switch) styling for free preferences vs. a priced checkbox.
-  final bool isToggle;
-
-  const AddOn(this.label, this.priceDelta, {this.isToggle = false});
-}
-
-/// Placeholder add-ons for the detail screen. Deliberately simple.
-const List<AddOn> kDetailAddOns = [
-  AddOn('Extra Cheese', 1.00),
-  AddOn('Bacon', 1.50),
-  AddOn('No Onions', 0.00, isToggle: true),
-  AddOn('Toasted Bun', 0.00, isToggle: true),
-];
+// ─── Pricing helper ───────────────────────────────────────────────────────────
 
 /// Total shown on the "Add to Cart" button:
-/// `quantity × (basePrice + Σ selected add-on deltas)`. Pure & testable.
+/// `quantity × (basePrice + Σ selected add-on prices)`. Pure & testable.
+///
+/// Mirrors `CartItem.unitPrice × quantity`, so the figure on the button is
+/// exactly what the cart line will cost once added.
 double itemDetailTotal({
   required double basePrice,
   required int quantity,
@@ -90,30 +74,34 @@ class _ItemDetailBody extends ConsumerStatefulWidget {
 class _ItemDetailBodyState extends ConsumerState<_ItemDetailBody> {
   int _quantity = 1;
   bool _isFavorite = false;
-  final Set<int> _selectedAddOns = {};
+
+  /// Selected add-on IDS (not indices) — stable if the item's add-on list is
+  /// reordered or edited while the screen is open.
+  final Set<String> _selectedAddOnIds = {};
 
   // Static/mock rating — no reviews backend yet.
   static const double _rating = 4.8;
   static const int _reviewCount = 124;
 
-  // Add-ons are display-only for now (real modeling lands in the Order feature,
-  // where OrderItem is the frozen snapshot). The button total therefore reflects
-  // ONLY what actually enters the cart — quantity × base price — so it never
-  // shows a figure that differs from the cart line. Selected deltas are
-  // intentionally excluded here.
+  /// The add-ons currently ticked, in the item's own display order so the cart
+  /// line key is built from a stable sequence.
+  List<AddOn> get _selectedAddOns => widget.item.availableAddOns
+      .where((a) => _selectedAddOnIds.contains(a.id))
+      .toList(growable: false);
+
   double get _total => itemDetailTotal(
         basePrice: widget.item.price,
         quantity: _quantity,
-        selectedDeltas: const [],
+        selectedDeltas: _selectedAddOns.map((a) => a.price),
       );
 
   void _addToCart() {
-    // Uses the EXISTING CartNotifier.addItem with the current CartItem shape.
-    // Adding N is done by adding one unit at a time (see feature note on why
-    // add-ons are not carried into the cart yet).
+    // One unit at a time, carrying the selection so the notifier can merge into
+    // a matching line or start a distinct one (CartItem.lineKey).
     final notifier = ref.read(cartProvider.notifier);
+    final selected = _selectedAddOns;
     for (var i = 0; i < _quantity; i++) {
-      notifier.addItem(widget.item);
+      notifier.addItem(widget.item, selectedAddOns: selected);
     }
 
     ScaffoldMessenger.of(context).clearSnackBars();
@@ -184,52 +172,33 @@ class _ItemDetailBodyState extends ConsumerState<_ItemDetailBody> {
                         Text(item.description,
                             style: AppTextStyles.itemDescription
                                 .copyWith(fontSize: 15, height: 1.5)),
-                        const SizedBox(height: 20),
-                        const Divider(color: AppColors.divider, height: 1),
-                        const SizedBox(height: 20),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Text('Customize your order',
-                                style: AppTextStyles.heading2),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: AppColors.surface,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                    color: AppColors.borderColor, width: 0.5),
+                        // Customization is only offered when the admin has
+                        // defined add-ons for this item; otherwise the whole
+                        // section is omitted rather than shown empty.
+                        if (item.availableAddOns.isNotEmpty) ...[
+                          const SizedBox(height: 20),
+                          const Divider(color: AppColors.divider, height: 1),
+                          const SizedBox(height: 20),
+                          Text('Customize your order',
+                              style: AppTextStyles.heading2),
+                          const SizedBox(height: 12),
+                          for (final addOn in item.availableAddOns)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _AddOnRow(
+                                addOn: addOn,
+                                selected:
+                                    _selectedAddOnIds.contains(addOn.id),
+                                onChanged: (v) => setState(() {
+                                  if (v) {
+                                    _selectedAddOnIds.add(addOn.id);
+                                  } else {
+                                    _selectedAddOnIds.remove(addOn.id);
+                                  }
+                                }),
                               ),
-                              child: Text('Preview',
-                                  style: AppTextStyles.cartBarLabel),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "Selections here don't change the price or your cart "
-                          'yet — coming soon.',
-                          style: AppTextStyles.itemDescription
-                              .copyWith(fontSize: 12),
-                        ),
-                        const SizedBox(height: 12),
-                        for (var i = 0; i < kDetailAddOns.length; i++)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _AddOnRow(
-                              addOn: kDetailAddOns[i],
-                              selected: _selectedAddOns.contains(i),
-                              onChanged: (v) => setState(() {
-                                if (v) {
-                                  _selectedAddOns.add(i);
-                                } else {
-                                  _selectedAddOns.remove(i);
-                                }
-                              }),
-                            ),
-                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -407,14 +376,17 @@ class _AddOnRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            if (!addOn.isToggle) ...[
+            // A free preference ("No Onions") reads as a switch; a paid extra
+            // as a checkbox with its price. Derived from price, not a stored
+            // flag — see AddOn.isFreePreference.
+            if (!addOn.isFreePreference) ...[
               _CheckSquare(selected: selected),
               const SizedBox(width: 12),
             ],
             Expanded(
-              child: Text(addOn.label, style: AppTextStyles.itemName),
+              child: Text(addOn.name, style: AppTextStyles.itemName),
             ),
-            if (addOn.isToggle)
+            if (addOn.isFreePreference)
               Switch(
                 value: selected,
                 onChanged: onChanged,
@@ -423,7 +395,7 @@ class _AddOnRow extends StatelessWidget {
               )
             else
               Text(
-                '+\$${addOn.priceDelta.toStringAsFixed(2)}',
+                '+\$${addOn.price.toStringAsFixed(2)}',
                 style: AppTextStyles.price,
               ),
           ],

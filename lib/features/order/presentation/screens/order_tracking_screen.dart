@@ -490,21 +490,42 @@ class _OrderSummaryCardState extends State<_OrderSummaryCard> {
             for (final item in order.items)
               Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('${item.quantity}×',
-                        style: AppTextStyles.itemName
-                            .copyWith(color: AppColors.accent)),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(item.name,
-                          style: AppTextStyles.itemDescription
-                              .copyWith(color: AppColors.textPrimary),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
+                    Row(
+                      children: [
+                        Text('${item.quantity}×',
+                            style: AppTextStyles.itemName
+                                .copyWith(color: AppColors.accent)),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(item.name,
+                              style: AppTextStyles.itemDescription
+                                  .copyWith(color: AppColors.textPrimary),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis),
+                        ),
+                        Text('\$${item.lineTotal.toStringAsFixed(2)}',
+                            style: AppTextStyles.cartBarSummary),
+                      ],
                     ),
-                    Text('\$${item.lineTotal.toStringAsFixed(2)}',
-                        style: AppTextStyles.cartBarSummary),
+                    // Add-ons as FROZEN on the order — the names and prices as
+                    // they were at checkout, not today's menu definitions.
+                    for (final addOn in item.addOns)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 28, top: 2),
+                        child: Text(
+                          addOn.price == 0
+                              ? '+ ${addOn.name}'
+                              : '+ ${addOn.name} '
+                                  '(\$${addOn.price.toStringAsFixed(2)})',
+                          style: AppTextStyles.itemDescription
+                              .copyWith(fontSize: 12),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                   ],
                 ),
               ),
